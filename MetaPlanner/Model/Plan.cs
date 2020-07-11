@@ -10,17 +10,9 @@ namespace MetaPlanner.Model
     {
         public string PlanId { get; set; }
         public string PlanName { get; set; }
-       // public string MailAddress { get; set; }
-        //public string Description { get; set; }
-       // public bool IsPublic { get; set; }
-       // public string GroupName { get; set; }
-        //public string GroupId { get; set; }
         public string CreatedBy { get; set; }
         public string CreatedDate { get; set; }
         public string Owner { get; set; }
-       // public string SourceAppName { get; set; }
-        //public string SourceAppId { get; set; }
-        //public int TotalTasks { get; set; }
-        //public int TotalBuckets { get; set; }
+        public string Url { get; set; }
     }
 }

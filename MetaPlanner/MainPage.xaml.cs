@@ -138,7 +138,8 @@ namespace MetaPlanner
                         PlanName = p.Title,
                         CreatedBy = p.CreatedBy.User.Id,
                         CreatedDate = p.CreatedDateTime.ToString(),
-                        Owner = p.Owner
+                        Owner = p.Owner,
+                        Url = "https://tasks.office.com/congenrep.onmicrosoft.com/Home/PlanViews/"+p.Id
                     });
                     counter++;
 
