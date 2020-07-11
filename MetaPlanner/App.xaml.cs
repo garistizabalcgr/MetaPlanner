@@ -20,8 +20,14 @@ namespace MetaPlanner
     /// <summary>
     /// Proporciona un comportamiento específico de la aplicación para complementar la clase Application predeterminada.
     /// </summary>
+    /// 
+
     sealed partial class App : Application
     {
+
+        //private static string ClientId = "095ada9d-71d5-42b3-a962-28726a951818";
+        //private static string Tenant = "congenrep.onmicrosoft.com";
+
         /// <summary>
         /// Inicializa el objeto de aplicación Singleton. Esta es la primera línea de código creado
         /// ejecutado y, como tal, es el equivalente lógico de main() o WinMain().

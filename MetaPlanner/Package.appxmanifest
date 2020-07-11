@@ -7,15 +7,15 @@
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Name="106993c1-1f2f-47aa-bd35-fd134ee33d6e"
-    Publisher="CN=garistizabal"
+    Name="b54a5d50-e189-4050-ae47-7bb4ca4f0667"
+    Publisher="CN=garis"
     Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="106993c1-1f2f-47aa-bd35-fd134ee33d6e" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="b54a5d50-e189-4050-ae47-7bb4ca4f0667" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>MetaPlanner</DisplayName>
-    <PublisherDisplayName>garistizabal</PublisherDisplayName>
+    <PublisherDisplayName>GAR</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -37,8 +37,14 @@
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="MetaPlanner"
         BackgroundColor="transparent">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\LargeTile.png" Square71x71Logo="Assets\SmallTile.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
+        <uap:InitialRotationPreference>
+          <uap:Rotation Preference="landscape"/>
+          <uap:Rotation Preference="portrait"/>
+          <uap:Rotation Preference="landscapeFlipped"/>
+          <uap:Rotation Preference="portraitFlipped"/></uap:InitialRotationPreference>
+        <uap:LockScreen BadgeLogo="Assets\BadgeLogo.png" Notification="badgeAndTileText"/>
       </uap:VisualElements>
     </Application>
   </Applications>

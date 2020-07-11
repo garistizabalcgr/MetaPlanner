@@ -5,10 +5,28 @@
     xmlns:local="using:MetaPlanner"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:telerik="using:Telerik.UI.Xaml.Controls.Chart"
+    xmlns:telerikGrid="using:Telerik.UI.Xaml.Controls.Grid"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Height="1982">
 
-    <Grid>
+    <Grid RenderTransformOrigin="0.539,0.213">
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition />
+        </Grid.RowDefinitions>
 
+        <StackPanel Background="Black">
+             <telerikGrid:RadDataGrid x:Name="PlanGrid" Grid.Row="0" ItemsSource="{Binding}" Height="700" Background="DarkGray">
+            </telerikGrid:RadDataGrid>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock x:Name="lblMessage" Text="0" VerticalAlignment="Center" HorizontalAlignment="Right" Padding="5"  Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoad" Content="Load" HorizontalAlignment="Right" Padding="5" Click="CallGroupButton_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnCall" Content="Call Microsoft Graph API" HorizontalAlignment="Right" Padding="5" Click="CallGraphButton_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="SignOutButton" Content="Sign-Out" HorizontalAlignment="Right" Padding="5" Click="SignOutButton_Click" Margin="5" Visibility="Collapsed" FontFamily="Segoe Ui"/>
+                <Image Source="/Assets/SmallTile.scale-100.png" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="1" Height="100"/>
+            </StackPanel>
+        </StackPanel>
     </Grid>
+    
 </Page>
