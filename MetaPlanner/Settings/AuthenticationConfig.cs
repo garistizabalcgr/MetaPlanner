@@ -24,8 +24,15 @@ namespace MetaPlanner
 
         public string MSGraphURL { get; set; } = "https://graph.microsoft.com/v1.0/";
 
+        /// <summary>
+        /// Scope for API call comma separated
+        /// </summary>
         public string Scopes { get; set; }
 
+
+        /// <summary>
+        /// Array of scopes (splited)
+        /// </summary>
         public string[] scopes
         {
             get
