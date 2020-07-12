@@ -122,10 +122,11 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Model\Assignment.cs" />
-    <Compile Include="Model\Bucket.cs" />
-    <Compile Include="Model\Plan.cs" />
-    <Compile Include="Model\PTask.cs" />
+    <Compile Include="Model\MetaPlannerAssignment.cs" />
+    <Compile Include="Model\MetaPlannerBucket.cs" />
+    <Compile Include="Model\MetaPlannerPlan.cs" />
+    <Compile Include="Model\MetaPlannerTask.cs" />
+    <Compile Include="Model\MetaPlannerUser.cs" />
     <Compile Include="Output\Writer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings\AuthenticationConfig.cs" />

@@ -11,7 +11,8 @@ using System.Net.Http.Headers;
 using Windows.UI.Popups;
 using MetaPlanner.Model;
 using MetaPlanner.Output;
-using Telerik.UI.Xaml.Controls.DataVisualization;
+using System.IO;
+using Windows.Storage;
 
 
 
@@ -50,9 +51,8 @@ namespace MetaPlanner
 
             try
             {
-                var x = config.scopes;
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(config.scopes);
+                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
                 // Call the /me endpoint of Graph
                 User graphUser = await graphClient.Me.Request().GetAsync();
@@ -82,36 +82,11 @@ namespace MetaPlanner
         private async void CallGroupButton_Click(object sender, RoutedEventArgs e)
         {
             
-            /*
-            RadialGaugeLabels labels = new RadialGaugeLabels();
-            RadialGaugeTicks smallTicks = new RadialGaugeTicks();
-            RadialGaugeTicks bigTicks = new RadialGaugeTicks();
-            RadialGaugeNeedle needle = new RadialGaugeNeedle();
-            RadialGaugeArc arc = new RadialGaugeArc();
-            labels.LabelFontSize = 4;
-            smallTicks.TickColor = Color.Red;
-            smallTicks.TickThickness = 0.5f;
-            smallTicks.TicksCount = 30;
-            smallTicks.TickStartIndexVisibleRange = 15;
-            bigTicks.TickColor = Color.DimGray;
-            bigTicks.TickThickness = 1f;
-            bigTicks.TicksCount = 10;
-            bigTicks.TicksLenghtPercentage = 20;
-            bigTicks.TicksRadiusPercentage = 80;
-            needle.LenghtPercentage = 60;
-            arc.Width = 0.5f;
-            arc.BackColor = Color.Gray;
-            radRadialGauge1.Items.Add(labels);
-            radRadialGauge1.Items.Add(smallTicks);
-            radRadialGauge1.Items.Add(bigTicks);
-            radRadialGauge1.Items.Add(needle);
-            radRadialGauge1.Items.Add(arc);*/
-
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
             try
             {
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(config.scopes);
+                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
                 // Call of Graph
                 // var tasks = await graphClient.Me.Planner.Tasks.Request().GetAsync();
@@ -119,14 +94,12 @@ namespace MetaPlanner
 
                 //var users = await graphClient.Users.Request().GetAsync();
 
-                Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
-
                 var plans = await graphClient.Me.Planner.Plans.Request().GetAsync();
 
-                List<Plan> listPlan = new List<Plan>();
-                List<Bucket> listBuckets = new List<Bucket>();
-                List<PTask> listTasks = new List<PTask>();
-                List<Assignment> listAssignment = new List<Assignment>();
+                List<MetaPlannerPlan> listPlan = new List<MetaPlannerPlan>();
+                List<MetaPlannerBucket> listBuckets = new List<MetaPlannerBucket>();
+                List<MetaPlannerTask> listTasks = new List<MetaPlannerTask>();
+                List<MetaPlannerAssignment> listAssignment = new List<MetaPlannerAssignment>();
 
                 List<PlannerPlan> allPlans = new List<PlannerPlan>();
                 while (plans.Count > 0)
@@ -154,7 +127,7 @@ namespace MetaPlanner
                 int counter = 0;
                 foreach (PlannerPlan p in allPlans)
                 {
-                    listPlan.Add(new Plan()
+                    listPlan.Add(new MetaPlannerPlan()
                     {
                         PlanId = p.Id,
                         PlanName = p.Title,
@@ -183,7 +156,7 @@ namespace MetaPlanner
 
                     foreach (PlannerBucket b in allBuckets)
                     {
-                        listBuckets.Add(new Bucket()
+                        listBuckets.Add(new MetaPlannerBucket()
                         {
                             BucketId = b.Id,
                             BucketName = b.Name,
@@ -211,7 +184,7 @@ namespace MetaPlanner
                     int counterT = 0;
                     foreach (PlannerTask t in allTasks)
                     {
-                        PTask myTask = new PTask();
+                        MetaPlannerTask myTask = new MetaPlannerTask();
                         myTask.TaskId = t.Id;
                         int j = t.Title.IndexOf(";");
                         if (j == -1)
@@ -279,7 +252,7 @@ namespace MetaPlanner
 
                         foreach (string userId in t.Assignments.Assignees)
                         {
-                            listAssignment.Add(new Assignment()
+                            listAssignment.Add(new MetaPlannerAssignment()
                             {
                                 TaskId = t.Id,
                                 UserId = userId
@@ -294,11 +267,23 @@ namespace MetaPlanner
                 }
 
 
+                String prefix = String.Format("{0:D4}", DateTime.Now.Year) + "-" + String.Format("{0:D2}", DateTime.Now.Month) + "-" + String.Format("{0:D2}", DateTime.Now.Day) + "_" + String.Format("{0:D2}", DateTime.Now.Hour) + "_" + String.Format("{0:D2}", DateTime.Now.Minute) + "_" + String.Format("{0:D2}", DateTime.Now.Second);
+                StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+
                 Writer writer = new Writer();
-                writer.WritePlans(listPlan, "plans");
-                writer.WriteBuckets(listBuckets, "buckets");
-                writer.WriteTasks(listTasks, "tasks");
-                writer.WriteAssignees(listAssignment, "assignees");
+                writer.Write(listPlan, storageFolder, "plans.csv");
+                writer.Write(listPlan, storageFolder, prefix+" plans.csv");
+
+                writer.Write(listBuckets, storageFolder, "buckets.csv");
+                writer.Write(listBuckets, storageFolder, prefix + " buckets.csv");
+
+                writer.Write(listTasks, storageFolder, "tasks.csv");
+                writer.Write(listTasks, storageFolder, prefix + " tasks.csv");
+
+                writer.Write(listAssignment, storageFolder, "assignees.csv");
+                writer.Write(listAssignment, storageFolder, prefix + " assignees.csv");
+
+                //File.Copy(sourceFile, destinationFile, true);
 
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
 

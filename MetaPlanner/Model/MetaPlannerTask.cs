@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MetaPlanner.Model
 {
-    class PTask
+    class MetaPlannerTask
     {
         public string TaskId { get; set; }
         public string TaskName { get; set; }

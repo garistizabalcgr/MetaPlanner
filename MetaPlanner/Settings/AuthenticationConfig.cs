@@ -33,11 +33,10 @@ namespace MetaPlanner
         /// <summary>
         /// Array of scopes (splited)
         /// </summary>
-        public string[] scopes
+        public string[] ScopesArray
         {
             get
             {
-                //return ScopesString.Split(","); ;
                 var arr = Scopes.Split(",");
                 for( int i =0; i < arr.Length; i++)
                 {
