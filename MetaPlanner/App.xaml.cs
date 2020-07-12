@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,7 +25,6 @@ namespace MetaPlanner
 
     sealed partial class App : Application
     {
-
         //private static string ClientId = "095ada9d-71d5-42b3-a962-28726a951818";
         //private static string Tenant = "congenrep.onmicrosoft.com";
 

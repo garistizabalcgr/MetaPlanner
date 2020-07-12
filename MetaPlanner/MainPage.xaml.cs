@@ -3,25 +3,17 @@ using Microsoft.Identity.Client;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Navigation;
 using System.Threading.Tasks;
 using System.Net.Http.Headers;
-using CsvHelper;
-using System.Globalization;
+using Windows.UI.Popups;
 using MetaPlanner.Model;
 using MetaPlanner.Output;
-using Telerik.Core;
+using Telerik.UI.Xaml.Controls.DataVisualization;
+
+
 
 // La plantilla de elemento Página en blanco está documentada en https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0xc0a
 
@@ -33,19 +25,15 @@ namespace MetaPlanner
     public sealed partial class MainPage : Page
     {
 
+        public static AuthenticationConfig config = AuthenticationConfig.ReadFromJsonFile();
+
         //Set the scope for API call to user.read
-        private string[] scopes = new string[] { "Group.Read.All", "Group.ReadWrite.All", "profile", "User.Read" };
-
-        //(Application Id) of your app registration and the tenant information. 
-        private const string ClientId = "095ada9d-71d5-42b3-a962-28726a951818";
-
-        private const string Tenant = "congenrep.onmicrosoft.com"; // Alternatively "[Enter your tenant, as obtained from the azure portal, e.g. kko365.onmicrosoft.com]"
-        private const string Authority = "https://login.microsoftonline.com/" + Tenant;
+        //private string[] scopes = new string[] { "Group.Read.All", "Group.ReadWrite.All", "profile", "User.Read" };
 
         // The MSAL Public client app
         private static IPublicClientApplication PublicClientApp;
 
-        private static string MSGraphURL = "https://graph.microsoft.com/v1.0/";
+       // private static string MSGraphURL = "https://graph.microsoft.com/v1.0/";
         private static AuthenticationResult authResult;
 
         //string redirectURI = Windows.Security.Authentication.Web.WebAuthenticationBroker.GetCurrentApplicationCallbackUri().ToString();
@@ -54,8 +42,7 @@ namespace MetaPlanner
         public MainPage()
         {
             this.InitializeComponent();
-            var task = Task.Run(async () => await LoadData());
-
+            lblMessage.Text = config.Tenant;
         }
 
         private async Task LoadData()
@@ -63,8 +50,9 @@ namespace MetaPlanner
 
             try
             {
+                var x = config.scopes;
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(scopes);
+                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(config.scopes);
 
                 // Call the /me endpoint of Graph
                 User graphUser = await graphClient.Me.Request().GetAsync();
@@ -93,11 +81,37 @@ namespace MetaPlanner
         /// </summary>
         private async void CallGroupButton_Click(object sender, RoutedEventArgs e)
         {
+            
+            /*
+            RadialGaugeLabels labels = new RadialGaugeLabels();
+            RadialGaugeTicks smallTicks = new RadialGaugeTicks();
+            RadialGaugeTicks bigTicks = new RadialGaugeTicks();
+            RadialGaugeNeedle needle = new RadialGaugeNeedle();
+            RadialGaugeArc arc = new RadialGaugeArc();
+            labels.LabelFontSize = 4;
+            smallTicks.TickColor = Color.Red;
+            smallTicks.TickThickness = 0.5f;
+            smallTicks.TicksCount = 30;
+            smallTicks.TickStartIndexVisibleRange = 15;
+            bigTicks.TickColor = Color.DimGray;
+            bigTicks.TickThickness = 1f;
+            bigTicks.TicksCount = 10;
+            bigTicks.TicksLenghtPercentage = 20;
+            bigTicks.TicksRadiusPercentage = 80;
+            needle.LenghtPercentage = 60;
+            arc.Width = 0.5f;
+            arc.BackColor = Color.Gray;
+            radRadialGauge1.Items.Add(labels);
+            radRadialGauge1.Items.Add(smallTicks);
+            radRadialGauge1.Items.Add(bigTicks);
+            radRadialGauge1.Items.Add(needle);
+            radRadialGauge1.Items.Add(arc);*/
+
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
             try
             {
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(scopes);
+                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(config.scopes);
 
                 // Call of Graph
                 // var tasks = await graphClient.Me.Planner.Tasks.Request().GetAsync();
@@ -127,6 +141,14 @@ namespace MetaPlanner
                         break;
                     }
                 }
+
+                
+
+                this.RadialGauge.MaxValue = allPlans.Count;
+                this.RadialGauge.TickStep = allPlans.Count/12;
+                this.RadialGauge.LabelStep = allPlans.Count/4;
+                this.RadialGauge.Visibility = Visibility.Visible;
+
 
                 lblMessage.Text = "All:" + allPlans.Count;
                 int counter = 0;
@@ -265,7 +287,7 @@ namespace MetaPlanner
                         }
 
                         lblMessage.Text = counter + " of " + allPlans.Count;
-
+                        Bar.Value = counter;
                     }
 
 
@@ -278,9 +300,6 @@ namespace MetaPlanner
                 writer.WriteTasks(listTasks, "tasks");
                 writer.WriteAssignees(listAssignment, "assignees");
 
-
-                PlanManager.SetPlans(listPlan);
-                this.DataContext = PlanManager.GetPlans();
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
 
             }
@@ -312,8 +331,8 @@ namespace MetaPlanner
             // Initialize the MSAL library by building a public client application
 
             /*
-            PublicClientApp = PublicClientApplicationBuilder.Create(ClientId)
-                .WithAuthority(Authority)
+            PublicClientApp = PublicClientApplicationBuilder.Create(config.ClientId)
+                .WithAuthority(config.Authority)
                 .WithUseCorporateNetwork(false)
                 .WithRedirectUri("https://login.microsoftonline.com/common/oauth2/nativeclient")
                  .WithLogging((level, message, containsPii) =>
@@ -323,7 +342,7 @@ namespace MetaPlanner
                 .Build();
             */
 
-            PublicClientApp = PublicClientApplicationBuilder.Create(ClientId)
+            PublicClientApp = PublicClientApplicationBuilder.Create(config.ClientId)
                 .WithAuthority("https://login.microsoftonline.com/common")
                 .WithUseCorporateNetwork(false)
                 .WithDefaultRedirectUri()
@@ -361,7 +380,7 @@ namespace MetaPlanner
         /// <returns>GraphServiceClient</returns>
         private async static Task<GraphServiceClient> SignInAndInitializeGraphServiceClient(string[] scopes)
         {
-            GraphServiceClient graphClient = new GraphServiceClient(MSGraphURL,
+            GraphServiceClient graphClient = new GraphServiceClient(config.MSGraphURL,
                 new DelegateAuthenticationProvider(async (requestMessage) =>
                 {
                     requestMessage.Headers.Authorization = new AuthenticationHeaderValue("bearer", await SignInUserAndGetTokenUsingMSAL(scopes));
@@ -375,24 +394,24 @@ namespace MetaPlanner
         /// </summary>
         private async void SignOutButton_Click(object sender, RoutedEventArgs e)
         {
-            IEnumerable<IAccount> accounts = await PublicClientApp.GetAccountsAsync().ConfigureAwait(false);
-            IAccount firstAccount = accounts.FirstOrDefault();
+             IEnumerable<IAccount> accounts = await PublicClientApp.GetAccountsAsync().ConfigureAwait(false);
+             IAccount firstAccount = accounts.FirstOrDefault();
 
-            try
-            {
-                await PublicClientApp.RemoveAsync(firstAccount).ConfigureAwait(false);
-                await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
-                {
+             try
+             {
+                 await PublicClientApp.RemoveAsync(firstAccount).ConfigureAwait(false);
+                 await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                 {
 
-                    this.btnCall.Visibility = Visibility.Visible;
-                    this.SignOutButton.Visibility = Visibility.Collapsed;
-                });
-            }
-            catch (MsalException ex)
-            {
-                lblMessage.Text = ex.Message;
-            }
-        }
+                     this.btnCall.Visibility = Visibility.Visible;
+                     this.SignOutButton.Visibility = Visibility.Collapsed;
+                 });
+             }
+             catch (MsalException ex)
+             {
+                 lblMessage.Text = ex.Message;
+             }    
+         }
 
         /// <summary>
         /// Display basic information contained in the token. Needs to be called from the UI thead.
@@ -414,15 +433,25 @@ namespace MetaPlanner
             await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
                    () =>
                    {
-                       lblMessage.Text = message;                
-                       
-                       });
+                       lblMessage.Text = message;      
+                    });
+
+            // Create the message dialog and set its content
+            var messageDialog = new MessageDialog(message,"Error");
+
+            // Set the command that will be invoked by default
+           // messageDialog.DefaultCommandIndex = 0;
+
+            // Set the command to be invoked when escape is pressed
+           // messageDialog.CancelCommandIndex = 1;
+
+            // Show the message dialog
+            await messageDialog.ShowAsync();
         }
 
-        public class Foo
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-        }
+
+
+
+
     }
 }
