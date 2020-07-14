@@ -292,7 +292,7 @@ namespace MetaPlanner
                     int counterT = 0;
                     foreach (PlannerTask t in allTasks)
                     {
-                        MetaPlannerTask myTask = new MetaPlannerTask(){ TaskId= t.Id };
+                        MetaPlannerTask myTask = new MetaPlannerTask(){ TaskId= t.Id, Hours="0" };
 
                         int j = t.Title.IndexOf(";");
                         if (j == -1)
@@ -352,6 +352,11 @@ namespace MetaPlanner
                                 AdditionalData = new Dictionary<string, object>()
                                     {
                                         {"Title", myTask.TaskId},
+                                        {"TaskName", myTask.TaskName},
+                                        {"Prefix", myTask.Prefix},
+
+                                        {"Hours", Convert.ToDecimal(myTask.Hours) },
+
                                         {"ActiveChecklistItemCount", t.ActiveChecklistItemCount},
                                         {"AdditionalData",  t.AdditionalData.Count},
                                         {"Category1", myTask.Category1},
@@ -373,6 +378,7 @@ namespace MetaPlanner
                                         {"HasDescription", myTask.HasDescription},
                                         {"OrderHint", myTask.OrderHint},
                                         {"PercentComplete", t.PercentComplete},
+                                        {"PlanId", t.PlanId},
                                         {"ReferenceCount", t.ReferenceCount},
                                         {"StartDateTime", t.StartDateTime},
                                         {"Url", myTask.Url}
@@ -415,7 +421,7 @@ namespace MetaPlanner
                                     }
                                 }
                             };
-                            //await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["assignees"].Items.Request().AddAsync(assigneesItem);
+                            await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["assignees"].Items.Request().AddAsync(assigneesItem);
 
                         }
 
