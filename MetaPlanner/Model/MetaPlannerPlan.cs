@@ -12,7 +12,9 @@ namespace MetaPlanner.Model
         public string PlanName { get; set; }
         public string CreatedBy { get; set; }
         public string CreatedDate { get; set; }
-        public string Owner { get; set; }
+        public string GroupName { get; set; }
+        public string GroupDescription { get; set; }
+        public string GroupMail { get; set; }
         public string Url { get; set; }
     }
 }

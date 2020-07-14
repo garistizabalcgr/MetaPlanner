@@ -1,4 +1,4 @@
-﻿<Page xmlns:my="using:Telerik.UI.Xaml.Controls.DataVisualization" 
+﻿<Page xmlns:my1="using:Telerik.UI.Xaml.Controls.Data"  xmlns:my="using:Telerik.UI.Xaml.Controls.DataVisualization" 
     x:Class="MetaPlanner.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -16,10 +16,10 @@
         </Grid.RowDefinitions>
 
         <StackPanel Background="Black">
-            <telerikGrid:RadDataGrid x:Name="PlanGrid" Grid.Row="0" 
+            <telerikGrid:RadDataGrid x:Name="RadDataGrid" Grid.Row="0" 
                                      ItemsSource="{Binding}" Height="400" Background="DarkGray">
             </telerikGrid:RadDataGrid>
-            
+           
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="btnLoad" Content="Load" HorizontalAlignment="Right" Padding="5" Click="CallGroupButton_Click" Margin="5" FontFamily="Segoe Ui"/>
                
@@ -29,8 +29,6 @@
                                    TickStep="10" LabelStep="20" Padding="15"  Margin="15" Visibility="Collapsed">
 
                     <telerik:RadialBarGaugeIndicator x:Name="Bar" Brush="Green" Thickness="5" Margin="10"/>
-
-
 
                 </telerik:RadRadialGauge>
 

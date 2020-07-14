@@ -52,7 +52,7 @@ namespace MetaPlanner
         private async void CleanSharepointList(string listName)
         {
             var items = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists[listName].Items.Request().GetAsync();
-            PlanGrid.DataContext = items;
+            RadDataGrid.DataContext = items;
             List<ListItem> allItems = new List<ListItem>();
             while (items.Count > 0)
             {
@@ -68,7 +68,14 @@ namespace MetaPlanner
             }
             foreach (ListItem item in allItems)
             {
-                await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists[listName].Items[item.Id].Request().DeleteAsync();
+                try
+                {
+                    await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists[listName].Items[item.Id].Request().DeleteAsync();
+                }
+                catch(Exception e)
+                {
+
+                }
             }
 
             /*
@@ -123,7 +130,7 @@ namespace MetaPlanner
 
 
                 var list = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["plans"].Request().GetAsync();
-                PlanGrid.DataContext = list;
+                RadDataGrid.DataContext = list;
 
 
 
@@ -154,7 +161,7 @@ namespace MetaPlanner
         {
             
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
-            PlanGrid.StartBringIntoView();
+            RadDataGrid.StartBringIntoView();
 
 
             try
@@ -174,7 +181,7 @@ namespace MetaPlanner
                 List<MetaPlannerAssignment> listAssignment = new List<MetaPlannerAssignment>();
 
                 List<PlannerPlan> allPlans = new List<PlannerPlan>();
-                PlanGrid.DataContext = listPlan;
+                RadDataGrid.DataContext = listPlan;
 
                 while (plans.Count > 0)
                 {
@@ -200,15 +207,21 @@ namespace MetaPlanner
                 int counter = 0;
                 foreach (PlannerPlan p in allPlans)
                 {
+                    var group = await graphClient.Groups[p.Owner].Request().GetAsync();
+
                     listPlan.Add(new MetaPlannerPlan()
                     {
                         PlanId = p.Id,
                         PlanName = p.Title,
                         CreatedBy = p.CreatedBy.User.Id,
                         CreatedDate = p.CreatedDateTime.ToString(),
-                        Owner = p.Owner,
+                        GroupName = group.DisplayName,
+                        GroupDescription = group.Description,
+                        GroupMail = group.Mail,
                         Url = "https://tasks.office.com/congenrep.onmicrosoft.com/Home/PlanViews/"+p.Id
                     });
+
+                    
 
                     var planItem = new ListItem
                     {
@@ -220,7 +233,9 @@ namespace MetaPlanner
                                 {"PlanName", p.Title},
                                 {"CreatedBy", p.CreatedBy.User.Id},
                                 {"CreatedDate",  p.CreatedDateTime},
-                                {"Owner",  p.Owner},
+                                {"GroupName",  group.DisplayName},
+                                {"GroupDescription",  group.Description},
+                                {"GroupMail",  group.Mail},
                                 {"Url", "https://tasks.office.com/congenrep.onmicrosoft.com/Home/PlanViews/"+p.Id}
                             }
                         }
@@ -430,8 +445,8 @@ namespace MetaPlanner
                     }
 
 
-                    PlanGrid.DataContext = listPlan;
-                    PlanGrid.UpdateLayout();
+                    RadDataGrid.DataContext = listPlan;
+                    RadDataGrid.UpdateLayout();
                 }
 
 
