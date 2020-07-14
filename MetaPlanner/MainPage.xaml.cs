@@ -13,6 +13,7 @@ using MetaPlanner.Model;
 using MetaPlanner.Output;
 using System.IO;
 using Windows.Storage;
+using System.Text;
 
 
 
@@ -31,7 +32,7 @@ namespace MetaPlanner
         //Set the scope for API call to user.read
         //private string[] scopes = new string[] { "Group.Read.All", "Group.ReadWrite.All", "profile", "User.Read" };
 
-        // The MSAL Public client app
+        // The MSAL Public client GraphServiceClient
         private static IPublicClientApplication PublicClientApp;
 
        // private static string MSGraphURL = "https://graph.microsoft.com/v1.0/";
@@ -40,11 +41,61 @@ namespace MetaPlanner
         //string redirectURI = Windows.Security.Authentication.Web.WebAuthenticationBroker.GetCurrentApplicationCallbackUri().ToString();
         // ms-app://s-1-15-2-148375016-475961868-2312470711-1599034693-979352800-1769312473-2847594358/
 
+        GraphServiceClient graphClient;
         public MainPage()
         {
             this.InitializeComponent();
             lblMessage.Text = config.Tenant;
         }
+
+
+        private async void CleanSharepointList(string listName)
+        {
+            var items = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists[listName].Items.Request().GetAsync();
+            PlanGrid.DataContext = items;
+            List<ListItem> allItems = new List<ListItem>();
+            while (items.Count > 0)
+            {
+                allItems.AddRange(items);
+                if (items.NextPageRequest != null)
+                {
+                    items = await items.NextPageRequest.GetAsync();
+                }
+                else
+                {
+                    break;
+                }
+            }
+            foreach (ListItem item in allItems)
+            {
+                await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists[listName].Items[item.Id].Request().DeleteAsync();
+            }
+
+            /*
+            StringBuilder sbDelete = new StringBuilder("<Batch>");
+            for (int x = allItems.Count - 1; x >= 0; x--)
+            {
+
+                sbDelete.Append("<Method>");
+                sbDelete.Append("<SetList Scope='Request'>" + allItems[x].Id.ToString() + "</SetList>");
+                sbDelete.Append("<SetVar Name='Cmd'>DELETE</SetVar>");
+                sbDelete.Append("<SetVar Name='ID'>listItems[x].ID</SetVar>");
+                sbDelete.Append("</Method>");
+            }
+            sbDelete.Append("</Batch>");
+            web.AllowUnsafeUpdates = True;
+            web.ProcessBatchData(sbDelete.ToString());*/
+        }
+
+        private  void CleanAllSharePointLists()
+        {
+             CleanSharepointList("tasks");
+             CleanSharepointList("plans");
+             CleanSharepointList("buckets");
+             
+             CleanSharepointList("assignees");
+        }
+
 
         private async Task LoadData()
         {
@@ -52,10 +103,30 @@ namespace MetaPlanner
             try
             {
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+                graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
                 // Call the /me endpoint of Graph
                 User graphUser = await graphClient.Me.Request().GetAsync();
+
+
+                // Call of Graph
+
+                /*var groups = await graphClient.Groups.Request().GetAsync();
+                PlanGrid.DataContext = groups;
+
+
+                var site = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Request().GetAsync();
+                PlanGrid.DataContext = site;
+
+                var lists = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists.Request().GetAsync();
+                PlanGrid.DataContext = lists;*/
+
+
+                var list = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["plans"].Request().GetAsync();
+                PlanGrid.DataContext = list;
+
+
+
 
                 // Go back to the UI thread to make changes to the UI
                 await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
@@ -83,16 +154,17 @@ namespace MetaPlanner
         {
             
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
+            PlanGrid.StartBringIntoView();
+
+
             try
             {
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                GraphServiceClient graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
-
-                // Call of Graph
-                // var tasks = await graphClient.Me.Planner.Tasks.Request().GetAsync();
-
+                graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
                 //var users = await graphClient.Users.Request().GetAsync();
+
+                CleanAllSharePointLists();
 
                 var plans = await graphClient.Me.Planner.Plans.Request().GetAsync();
 
@@ -102,6 +174,8 @@ namespace MetaPlanner
                 List<MetaPlannerAssignment> listAssignment = new List<MetaPlannerAssignment>();
 
                 List<PlannerPlan> allPlans = new List<PlannerPlan>();
+                PlanGrid.DataContext = listPlan;
+
                 while (plans.Count > 0)
                 {
                     allPlans.AddRange(plans);
@@ -115,7 +189,6 @@ namespace MetaPlanner
                     }
                 }
 
-                
 
                 this.RadialGauge.MaxValue = allPlans.Count;
                 this.RadialGauge.TickStep = allPlans.Count/12;
@@ -136,7 +209,26 @@ namespace MetaPlanner
                         Owner = p.Owner,
                         Url = "https://tasks.office.com/congenrep.onmicrosoft.com/Home/PlanViews/"+p.Id
                     });
+
+                    var planItem = new ListItem
+                    {
+                        Fields = new FieldValueSet
+                        {
+                            AdditionalData = new Dictionary<string, object>()
+                            {
+                                {"Title", p.Id},
+                                {"PlanName", p.Title},
+                                {"CreatedBy", p.CreatedBy.User.Id},
+                                {"CreatedDate",  p.CreatedDateTime},
+                                {"Owner",  p.Owner},
+                                {"Url", "https://tasks.office.com/congenrep.onmicrosoft.com/Home/PlanViews/"+p.Id}
+                            }
+                        }
+                    };
+                    await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["plans"].Items.Request().AddAsync(planItem);
+
                     counter++;
+
 
                     var buckets = await graphClient.Planner.Plans[p.Id].Buckets.Request().GetAsync();
 
@@ -163,6 +255,22 @@ namespace MetaPlanner
                             OrderHint = b.OrderHint,
                             PlanId = b.PlanId
                         });
+
+                        var bucketItem = new ListItem
+                        {
+                            Fields = new FieldValueSet
+                            {
+                                AdditionalData = new Dictionary<string, object>()
+                                    {
+                                        {"Title", b.Id},
+                                        {"BucketName", b.Name},
+                                        {"OrderHint",  b.OrderHint},
+                                        {"PlanId", b.PlanId}
+                                    }
+                                }
+                        };
+                        await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+
                     }
                     var pTasks = await graphClient.Planner.Plans[p.Id].Tasks.Request().GetAsync();
 
@@ -184,8 +292,8 @@ namespace MetaPlanner
                     int counterT = 0;
                     foreach (PlannerTask t in allTasks)
                     {
-                        MetaPlannerTask myTask = new MetaPlannerTask();
-                        myTask.TaskId = t.Id;
+                        MetaPlannerTask myTask = new MetaPlannerTask(){ TaskId= t.Id };
+
                         int j = t.Title.IndexOf(";");
                         if (j == -1)
                         {
@@ -220,7 +328,7 @@ namespace MetaPlanner
                         myTask.AssigneePriority = t.AssigneePriority;
                         myTask.AssignmentsCount = t.Assignments.Count.ToString();
                         myTask.BucketId = t.BucketId;
-                        myTask.ChecklistItemCount = t.ReferenceCount.ToString();
+                        myTask.ChecklistItemCount = t.ChecklistItemCount.ToString();
                         if (t.CompletedBy != null)
                             myTask.CompletedBy = t.CompletedBy.User.Id;
                         myTask.CompletedDateTime = t.CompletedDateTime.ToString();
@@ -236,6 +344,43 @@ namespace MetaPlanner
                         myTask.StartDateTime = t.StartDateTime.ToString();
                         myTask.Url = "https://tasks.office.com/congenrep.onmicrosoft.com/es-es/Home/Task/" + t.Id;
                         #endregion
+
+                        var taskItem = new ListItem
+                        {
+                            Fields = new FieldValueSet
+                            {
+                                AdditionalData = new Dictionary<string, object>()
+                                    {
+                                        {"Title", myTask.TaskId},
+                                        {"ActiveChecklistItemCount", t.ActiveChecklistItemCount},
+                                        {"AdditionalData",  t.AdditionalData.Count},
+                                        {"Category1", myTask.Category1},
+                                        {"Category2", myTask.Category2},
+                                        {"Category3", myTask.Category3},
+                                        {"Category4", myTask.Category4},
+                                        {"Category5", myTask.Category5},
+                                        {"Category6", myTask.Category6},
+                                        {"AssigneePriority", myTask.AssigneePriority},
+                                        {"AssignmentsCount", t.Assignments.Count},
+                                        {"BucketId", myTask.BucketId},
+                                        {"ChecklistItemCount", t.ChecklistItemCount},
+                                        {"CompletedBy", myTask.CompletedBy},
+                                        {"CompletedDateTime", t.CompletedDateTime},
+                                        {"ConversationThreadId", myTask.ConversationThreadId},
+                                        {"CreatedBy", myTask.CreatedBy},
+                                        {"CreatedDateTime", t.CreatedDateTime},
+                                        {"DueDateTime", t.DueDateTime},
+                                        {"HasDescription", myTask.HasDescription},
+                                        {"OrderHint", myTask.OrderHint},
+                                        {"PercentComplete", t.PercentComplete},
+                                        {"ReferenceCount", t.ReferenceCount},
+                                        {"StartDateTime", t.StartDateTime},
+                                        {"Url", myTask.Url}
+                                    }
+                            }
+                        };
+                        await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["tasks"].Items.Request().AddAsync(taskItem);
+
                         counterT++;
 
 
@@ -257,6 +402,21 @@ namespace MetaPlanner
                                 TaskId = t.Id,
                                 UserId = userId
                             });
+
+
+                            var assigneesItem = new ListItem
+                            {
+                                Fields = new FieldValueSet
+                                {
+                                    AdditionalData = new Dictionary<string, object>()
+                                    {
+                                        {"Title", t.Id},
+                                        {"UserId", userId}
+                                    }
+                                }
+                            };
+                            //await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["assignees"].Items.Request().AddAsync(assigneesItem);
+
                         }
 
                         lblMessage.Text = counter + " of " + allPlans.Count;
@@ -264,6 +424,8 @@ namespace MetaPlanner
                     }
 
 
+                    PlanGrid.DataContext = listPlan;
+                    PlanGrid.UpdateLayout();
                 }
 
 
@@ -271,20 +433,20 @@ namespace MetaPlanner
                 StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
 
                 Writer writer = new Writer();
-                writer.Write(listPlan, storageFolder, "plans.csv");
+                //writer.Write(listPlan, storageFolder, "plans.csv");
                 writer.Write(listPlan, storageFolder, prefix+" plans.csv");
 
-                writer.Write(listBuckets, storageFolder, "buckets.csv");
+                //writer.Write(listBuckets, storageFolder, "buckets.csv");
                 writer.Write(listBuckets, storageFolder, prefix + " buckets.csv");
 
-                writer.Write(listTasks, storageFolder, "tasks.csv");
+                //writer.Write(listTasks, storageFolder, "tasks.csv");
                 writer.Write(listTasks, storageFolder, prefix + " tasks.csv");
 
-                writer.Write(listAssignment, storageFolder, "assignees.csv");
+                //writer.Write(listAssignment, storageFolder, "assignees.csv");
                 writer.Write(listAssignment, storageFolder, prefix + " assignees.csv");
 
                 //File.Copy(sourceFile, destinationFile, true);
-
+                 
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
 
             }

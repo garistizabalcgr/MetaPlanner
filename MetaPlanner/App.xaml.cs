@@ -53,7 +53,6 @@ namespace MetaPlanner
             {
                 // Crear un marco para que actúe como contexto de navegación y navegar a la primera página.
                 rootFrame = new Frame();
-
                 rootFrame.NavigationFailed += OnNavigationFailed;
 
                 if (e.PreviousExecutionState == ApplicationExecutionState.Terminated)
