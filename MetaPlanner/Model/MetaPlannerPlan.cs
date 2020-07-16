@@ -16,5 +16,8 @@ namespace MetaPlanner.Model
         public string GroupDescription { get; set; }
         public string GroupMail { get; set; }
         public string Url { get; set; }
+        public string ParentId { get; set; }
+        public bool Visible { get; set; }
+
     }
 }

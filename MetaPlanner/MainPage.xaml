@@ -6,6 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:telerik="using:Telerik.UI.Xaml.Controls.DataVisualization"
     xmlns:telerikGrid="using:Telerik.UI.Xaml.Controls.Grid" 
+    xmlns:telerikGridPrimitives="using:Telerik.UI.Xaml.Controls.Grid.Primitives"  
       mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Height="1982">
 
@@ -18,6 +19,16 @@
         <StackPanel Background="Black">
             <telerikGrid:RadDataGrid x:Name="RadDataGrid" Grid.Row="0" 
                                      ItemsSource="{Binding}" Height="400" Background="DarkGray">
+                <telerikGrid:RadDataGrid.Resources>
+                    <Style TargetType="telerikGridPrimitives:DataGridFlyoutGroupHeader">
+                        <Setter Property="Background">
+                            <Setter.Value>
+                                <ImageBrush ImageSource="grouptile.png" AlignmentX="Left" AlignmentY="Top" Stretch="None"/>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </telerikGrid:RadDataGrid.Resources>
+
             </telerikGrid:RadDataGrid>
            
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
