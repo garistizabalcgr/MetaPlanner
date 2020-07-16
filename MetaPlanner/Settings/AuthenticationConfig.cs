@@ -90,6 +90,8 @@ namespace MetaPlanner
         /// <remarks> 
         public string CertificateName { get; set; }
 
+        public string Site { get; set; }
+
         /// <summary>
         /// Reads the configuration from a json file
         /// </summary>

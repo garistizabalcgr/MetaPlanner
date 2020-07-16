@@ -14,6 +14,7 @@ using MetaPlanner.Output;
 using System.IO;
 using Windows.Storage;
 using System.Text;
+using Serilog;
 
 
 
@@ -38,20 +39,37 @@ namespace MetaPlanner
        // private static string MSGraphURL = "https://graph.microsoft.com/v1.0/";
         private static AuthenticationResult authResult;
 
+
+        private StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+
+        private static Serilog.Core.Logger logger;
+
         //string redirectURI = Windows.Security.Authentication.Web.WebAuthenticationBroker.GetCurrentApplicationCallbackUri().ToString();
         // ms-app://s-1-15-2-148375016-475961868-2312470711-1599034693-979352800-1769312473-2847594358/
 
         GraphServiceClient graphClient;
         public MainPage()
         {
+            CreateLogger();
             this.InitializeComponent();
             lblMessage.Text = config.Tenant;
         }
 
+        public void CreateLogger()
+        {
+            //var path = ApplicationData.Current.LocalFolder.Path;
+            var path = storageFolder.Path;
+            var logger = new LoggerConfiguration()
+                .WriteTo.File(path + @"\log.txt", 
+                rollingInterval: RollingInterval.Hour, 
+                rollOnFileSizeLimit: true).CreateLogger();
+            logger.Information("Start MetaPlanner");
+        }
+            
 
         private async void CleanSharepointList(string listName)
         {
-            var items = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists[listName].Items.Request().GetAsync();
+            var items = await graphClient.Sites[config.Site].Lists[listName].Items.Request().GetAsync();
             RadDataGrid.DataContext = items;
             List<ListItem> allItems = new List<ListItem>();
             while (items.Count > 0)
@@ -70,11 +88,11 @@ namespace MetaPlanner
             {
                 try
                 {
-                    await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists[listName].Items[item.Id].Request().DeleteAsync();
+                    await graphClient.Sites[config.Site].Lists[listName].Items[item.Id].Request().DeleteAsync();
                 }
-                catch(Exception e)
+                catch(Exception ex)
                 {
-
+                    logger.Error(ex.Message);
                 }
             }
 
@@ -96,11 +114,12 @@ namespace MetaPlanner
 
         private  void CleanAllSharePointLists()
         {
-             CleanSharepointList("tasks");
-             CleanSharepointList("plans");
-             CleanSharepointList("buckets");
-             
-             CleanSharepointList("assignees");
+            CleanSharepointList("assignees");
+            CleanSharepointList("tasks");
+            CleanSharepointList("buckets");
+            //CleanSharepointList("plans");
+
+
         }
 
 
@@ -122,17 +141,15 @@ namespace MetaPlanner
                 PlanGrid.DataContext = groups;
 
 
-                var site = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Request().GetAsync();
+                var site = await graphClient.Sites[config.Site].Request().GetAsync();
                 PlanGrid.DataContext = site;
 
-                var lists = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists.Request().GetAsync();
+                var lists = await graphClient.Sites[config.Site].Lists.Request().GetAsync();
                 PlanGrid.DataContext = lists;*/
 
 
-                var list = await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["plans"].Request().GetAsync();
+                var list = await graphClient.Sites[config.Site].Lists["plans"].Request().GetAsync();
                 RadDataGrid.DataContext = list;
-
-
 
 
                 // Go back to the UI thread to make changes to the UI
@@ -145,10 +162,12 @@ namespace MetaPlanner
             catch (MsalException msalEx)
             {
                 await DisplayMessageAsync($"Error Acquiring Token:{System.Environment.NewLine}{msalEx}");
+                logger.Error(msalEx.Message);
             }
             catch (Exception ex)
             {
                 await DisplayMessageAsync($"Error Acquiring Token Silently:{System.Environment.NewLine}{ex}");
+                logger.Error(ex.Message);
                 return;
             }
         }
@@ -240,7 +259,7 @@ namespace MetaPlanner
                             }
                         }
                     };
-                    await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["plans"].Items.Request().AddAsync(planItem);
+                    await graphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
 
                     counter++;
 
@@ -284,7 +303,7 @@ namespace MetaPlanner
                                     }
                                 }
                         };
-                        await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+                        await graphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
 
                     }
                     var pTasks = await graphClient.Planner.Plans[p.Id].Tasks.Request().GetAsync();
@@ -400,7 +419,7 @@ namespace MetaPlanner
                                     }
                             }
                         };
-                        await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["tasks"].Items.Request().AddAsync(taskItem);
+                        await graphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
 
                         counterT++;
 
@@ -436,7 +455,7 @@ namespace MetaPlanner
                                     }
                                 }
                             };
-                            await graphClient.Sites["congenrep.sharepoint.com,47a643c0-1ade-4859-90af-36f0dac4ea1e,7ccd99da-5875-4876-bd3e-f3693cf37126"].Lists["assignees"].Items.Request().AddAsync(assigneesItem);
+                            await graphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneesItem);
 
                         }
 
@@ -451,7 +470,7 @@ namespace MetaPlanner
 
 
                 String prefix = String.Format("{0:D4}", DateTime.Now.Year) + "-" + String.Format("{0:D2}", DateTime.Now.Month) + "-" + String.Format("{0:D2}", DateTime.Now.Day) + "_" + String.Format("{0:D2}", DateTime.Now.Hour) + "_" + String.Format("{0:D2}", DateTime.Now.Minute) + "_" + String.Format("{0:D2}", DateTime.Now.Second);
-                StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                
 
                 Writer writer = new Writer();
                 //writer.Write(listPlan, storageFolder, "plans.csv");
@@ -474,10 +493,12 @@ namespace MetaPlanner
             catch (MsalException msalEx)
             {
                 await DisplayMessageAsync($"Error Acquiring Token:{System.Environment.NewLine}{msalEx}");
+                logger.Error(msalEx.Message);
             }
             catch (Exception ex)
             {
                 await DisplayMessageAsync($"Error Acquiring Token Silently:{System.Environment.NewLine}{ex}");
+                logger.Error(ex.Message);
                 return;
             }
         }
@@ -533,7 +554,7 @@ namespace MetaPlanner
             {
                 // A MsalUiRequiredException happened on AcquireTokenSilentAsync. This indicates you need to call AcquireTokenAsync to acquire a token
                 Debug.WriteLine($"MsalUiRequiredException: {ex.Message}");
-
+                logger.Error(ex.Message);
                 authResult = await PublicClientApp.AcquireTokenInteractive(scopes)
                                                   .ExecuteAsync()
                                                   .ConfigureAwait(false);
@@ -577,7 +598,7 @@ namespace MetaPlanner
              }
              catch (MsalException ex)
              {
-                 lblMessage.Text = ex.Message;
+                logger.Error(ex.Message);
              }    
          }
 
