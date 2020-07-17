@@ -73,7 +73,7 @@ namespace MetaPlanner
                     rootFrame.Navigate(typeof(MainPage), e.Arguments);
                 }
 
-                SystemNavigationManagerPreview.GetForCurrentView().CloseRequested += App_CloseRequested;
+                //SystemNavigationManagerPreview.GetForCurrentView().CloseRequested += App_CloseRequested;
                 // Asegurarse de que la ventana actual está activa.
                 Window.Current.Activate();
             }

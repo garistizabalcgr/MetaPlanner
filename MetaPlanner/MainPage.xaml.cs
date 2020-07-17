@@ -49,52 +49,18 @@ namespace MetaPlanner
 
         public MainPage()
         {
-
-
             this.InitializeComponent();
             lblMessage.Text = config.Tenant;
         }
 
-        /// <summary>
-        /// Call AcquireTokenAsync - to acquire a token requiring user to sign-in
-        /// </summary>
-        private async void ProcessPlans(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                // Sign-in user using MSAL and obtain an access token for MS Graph
-                graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
-
-                var plans = await graphClient.Me.Planner.Plans.Request().GetAsync();
-                List<PlannerPlan> plannerPlans =  new List<PlannerPlan>();
-                while (plans.Count > 0)
-                {
-                    plannerPlans.AddRange(plans);
-                    if (plans.NextPageRequest != null)
-                    {
-                        plans = await plans.NextPageRequest.GetAsync();
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                var listPlans = await GetSharePointList("plans");
-
-                RadDataGrid.DataContext = plannerPlans;
-            }
-            catch (Exception ex)
-            {
-                await DisplayMessageAsync($"ProcessPlans:{System.Environment.NewLine}{ex}");
-                App.logger.Error(ex.Message);
-                return;
-            }
-        }
 
         private async Task<List<ListItem>> GetSharePointList(string listName)
         {
-            var items = await graphClient.Sites[config.Site].Lists[listName].Items.Request().GetAsync();
+            var queryOptions = new List<QueryOption>()
+                {
+                    new QueryOption("expand", "fields")
+                };
+             var items = await graphClient.Sites[config.Site].Lists[listName].Items.Request(queryOptions).GetAsync();
             List<ListItem> allItems = new List<ListItem>();
             while (items.Count > 0)
             {
@@ -169,7 +135,6 @@ namespace MetaPlanner
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
         }
 
-
         private async Task LoadData()
         {
 
@@ -238,6 +203,90 @@ namespace MetaPlanner
                 App.logger.Error(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Call AcquireTokenAsync - to acquire a token requiring user to sign-in
+        /// </summary>
+        private async void ProcessPlans(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
+                // Sign-in user using MSAL and obtain an access token for MS Graph
+                graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+
+                #region Get bulk data from Planner
+                var page = await graphClient.Me.Planner.Plans.Request().GetAsync();
+                List<PlannerPlan> listPlanner = new List<PlannerPlan>();
+                while (page.Count > 0)
+                {
+                    listPlanner.AddRange(page);
+                    if (page.NextPageRequest != null)
+                    {
+                        page = await page.NextPageRequest.GetAsync();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                Dictionary<string, MetaPlannerPlan> plannerPlans = new Dictionary<string, MetaPlannerPlan>();
+
+                foreach (PlannerPlan p in listPlanner)
+                {
+                    var group = await graphClient.Groups[p.Owner].Request().GetAsync();
+                    plannerPlans.Add(p.Id, 
+                        new MetaPlannerPlan()
+                        {
+                            PlanId = p.Id,
+                            PlanName = p.Title,
+                            CreatedBy = p.CreatedBy.User.Id,
+                            CreatedDate = p.CreatedDateTime,
+                            GroupName = group.DisplayName,
+                            GroupDescription = group.Description,
+                            GroupMail = group.Mail,
+                            Url = "https://tasks.office.com/"+config.Tenant+"/Home/PlanViews/" + p.Id
+                        });
+                }
+                
+                String prefix = String.Format("{0:D4}", DateTime.Now.Year) + "-" + String.Format("{0:D2}", DateTime.Now.Month) + "-" + String.Format("{0:D2}", DateTime.Now.Day) + "_" + String.Format("{0:D2}", DateTime.Now.Hour) + "_" + String.Format("{0:D2}", DateTime.Now.Minute) + "_" + String.Format("{0:D2}", DateTime.Now.Second);
+                Writer writer = new Writer();
+                //writer.Write(listPlan, storageFolder, "plans.csv");
+                writer.Write(plannerPlans, storageFolder, prefix + " plans.csv");
+
+                #endregion
+                
+
+
+                #region Get bulk data from SharePoint
+                var listPlans = await GetSharePointList("plans");
+                
+                Dictionary<string, MetaPlannerPlan> sharePointPlans = new Dictionary<string, MetaPlannerPlan>();
+
+                foreach (ListItem item in listPlans)
+                {
+                    MetaPlannerPlan plan = new MetaPlannerPlan(item.Fields.AdditionalData);
+                    sharePointPlans.Add(plan.PlanId, plan);
+                }
+                writer.Write(sharePointPlans, storageFolder, prefix + " plansSP.csv");
+                #endregion
+
+
+                RadDataGrid.DataContext = sharePointPlans.Values;
+
+
+
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
+                }
+            catch (Exception ex)
+            {
+                await DisplayMessageAsync($"ProcessPlans:{System.Environment.NewLine}{ex}");
+                App.logger.Error(ex.Message);
+                return;
+            }
+        }
+
+
         /// <summary>
         /// Call AcquireTokenAsync - to acquire a token requiring user to sign-in
         /// </summary>
@@ -278,7 +327,6 @@ namespace MetaPlanner
                     }
                 }
 
-
                 this.RadialGauge.MaxValue = allPlans.Count;
                 this.RadialGauge.TickStep = allPlans.Count/12;
                 this.RadialGauge.LabelStep = allPlans.Count/4;
@@ -296,7 +344,7 @@ namespace MetaPlanner
                         PlanId = p.Id,
                         PlanName = p.Title,
                         CreatedBy = p.CreatedBy.User.Id,
-                        CreatedDate = p.CreatedDateTime.ToString(),
+                       // CreatedDate = (DateTime) p.CreatedDateTime,
                         GroupName = group.DisplayName,
                         GroupDescription = group.Description,
                         GroupMail = group.Mail,
@@ -314,7 +362,7 @@ namespace MetaPlanner
                                 {"Title", p.Id},
                                 {"PlanName", p.Title},
                                 {"CreatedBy", p.CreatedBy.User.Id},
-                                {"CreatedDate",  p.CreatedDateTime},
+                               // {"CreatedDate",  (DateTime)p.CreatedDateTime},
                                 {"GroupName",  group.DisplayName},
                                 {"GroupDescription",  group.Description},
                                 {"GroupMail",  group.Mail},
