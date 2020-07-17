@@ -1,20 +1,12 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
+﻿using System;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Windows.UI.Core.Preview;
+using Windows.UI.Popups;
+using Serilog;
 
 namespace MetaPlanner
 {
@@ -25,8 +17,8 @@ namespace MetaPlanner
 
     sealed partial class App : Application
     {
-        //private static string ClientId = "095ada9d-71d5-42b3-a962-28726a951818";
-        //private static string Tenant = "congenrep.onmicrosoft.com";
+
+        public static Serilog.Core.Logger logger;
 
         /// <summary>
         /// Inicializa el objeto de aplicación Singleton. Esta es la primera línea de código creado
@@ -34,8 +26,15 @@ namespace MetaPlanner
         /// </summary>
         public App()
         {
+            logger = new LoggerConfiguration()
+                .WriteTo.File(Windows.Storage.ApplicationData.Current.LocalFolder.Path + @"\MetaPlanner.log",
+                rollingInterval: RollingInterval.Minute,
+                rollOnFileSizeLimit: true).CreateLogger();
+            logger.Information("Start MetaPlanner");
+
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+
         }
 
         /// <summary>
@@ -73,9 +72,29 @@ namespace MetaPlanner
                     //parámetro de navegación
                     rootFrame.Navigate(typeof(MainPage), e.Arguments);
                 }
+
+                SystemNavigationManagerPreview.GetForCurrentView().CloseRequested += App_CloseRequested;
                 // Asegurarse de que la ventana actual está activa.
                 Window.Current.Activate();
             }
+        }
+
+
+        private async void App_CloseRequested(object sender, SystemNavigationCloseRequestedPreviewEventArgs e)
+        {
+            var deferral = e.GetDeferral();
+            var dialog = new MessageDialog("¿Estas segur@ de dejarnos?", "Salir");
+            var confirmCommand = new UICommand("Si");
+            var cancelCommand = new UICommand("No");
+            dialog.Commands.Add(confirmCommand);
+            dialog.Commands.Add(cancelCommand);
+            if (await dialog.ShowAsync() == cancelCommand)
+            {
+                //cancel close by handling the event
+                e.Handled = true;
+            }
+            logger.Information("End MetaPlanner");
+            deferral.Complete();
         }
 
         /// <summary>
