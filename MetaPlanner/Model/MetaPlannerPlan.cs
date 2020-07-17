@@ -8,7 +8,10 @@ namespace MetaPlanner.Model
 {
     public class MetaPlannerPlan
     {
-        
+
+        public MetaPlannerPlan()
+        {
+        }
 
         public MetaPlannerPlan(IDictionary<string, object> fields)
         {
@@ -24,10 +27,6 @@ namespace MetaPlanner.Model
             fields.TryGetValue("Visible", out visible);
         }
 
-        public MetaPlannerPlan()
-        {
-
-        }
 
         private object planId;
         public string PlanId

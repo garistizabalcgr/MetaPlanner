@@ -15,6 +15,8 @@ using System.IO;
 using Windows.Storage;
 using System.Text;
 using Serilog;
+using System.Xml.Serialization;
+using Windows.UI.Xaml.Data;
 
 
 
@@ -36,7 +38,7 @@ namespace MetaPlanner
         // The MSAL Public client GraphServiceClient
         private static IPublicClientApplication PublicClientApp;
 
-       // private static string MSGraphURL = "https://graph.microsoft.com/v1.0/";
+        // private static string MSGraphURL = "https://graph.microsoft.com/v1.0/";
         private static AuthenticationResult authResult;
 
 
@@ -45,13 +47,25 @@ namespace MetaPlanner
         //string redirectURI = Windows.Security.Authentication.Web.WebAuthenticationBroker.GetCurrentApplicationCallbackUri().ToString();
         // ms-app://s-1-15-2-148375016-475961868-2312470711-1599034693-979352800-1769312473-2847594358/
 
-        private GraphServiceClient graphClient;
+        private GraphServiceClient GraphClient;
+
+        private Dictionary<string, MetaPlannerPlan> PlannerPlans;
+
+        private Dictionary<string, MetaPlannerBucket> PlannerBuckets;
+
+        private Dictionary<string, MetaPlannerTask> PlannerTasks;
+
+        private String prefix;
+        private Writer writer = new Writer();
+
 
         public MainPage()
         {
+            prefix = String.Format("{0:D4}", DateTime.Now.Year) + "-" + String.Format("{0:D2}", DateTime.Now.Month) + "-" + String.Format("{0:D2}", DateTime.Now.Day) + "_" + String.Format("{0:D2}", DateTime.Now.Hour) + "_" + String.Format("{0:D2}", DateTime.Now.Minute) + "_" + String.Format("{0:D2}", DateTime.Now.Second);
             this.InitializeComponent();
             lblMessage.Text = config.Tenant;
         }
+        
 
 
         private async Task<List<ListItem>> GetSharePointList(string listName)
@@ -60,7 +74,7 @@ namespace MetaPlanner
                 {
                     new QueryOption("expand", "fields")
                 };
-             var items = await graphClient.Sites[config.Site].Lists[listName].Items.Request(queryOptions).GetAsync();
+            var items = await GraphClient.Sites[config.Site].Lists[listName].Items.Request(queryOptions).GetAsync();
             List<ListItem> allItems = new List<ListItem>();
             while (items.Count > 0)
             {
@@ -79,7 +93,7 @@ namespace MetaPlanner
 
         private async void CleanSharepointList(string listName)
         {
-            var items = await graphClient.Sites[config.Site].Lists[listName].Items.Request().GetAsync();
+            var items = await GraphClient.Sites[config.Site].Lists[listName].Items.Request().GetAsync();
             List<ListItem> allItems = new List<ListItem>();
             while (items.Count > 0)
             {
@@ -97,9 +111,9 @@ namespace MetaPlanner
             {
                 try
                 {
-                    await graphClient.Sites[config.Site].Lists[listName].Items[item.Id].Request().DeleteAsync();
+                    await GraphClient.Sites[config.Site].Lists[listName].Items[item.Id].Request().DeleteAsync();
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     App.logger.Error(ex.Message);
                 }
@@ -125,26 +139,25 @@ namespace MetaPlanner
         {
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
 
-            graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
-             CleanSharepointList("assignees");
-             CleanSharepointList("tasks");
+            GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+            CleanSharepointList("assignees");
+            CleanSharepointList("tasks");
             CleanSharepointList("buckets");
             CleanSharepointList("plans");
-            //CleanSharepointList("users");
+            CleanSharepointList("users");
 
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
         }
 
         private async Task LoadData()
         {
-
             try
             {
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+                GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
                 // Call the /me endpoint of Graph
-                User graphUser = await graphClient.Me.Request().GetAsync();
+                User graphUser = await GraphClient.Me.Request().GetAsync();
 
 
                 // Call of Graph
@@ -160,7 +173,7 @@ namespace MetaPlanner
                 PlanGrid.DataContext = lists;*/
 
 
-                var list = await graphClient.Sites[config.Site].Lists["plans"].Request().GetAsync();
+                var list = await GraphClient.Sites[config.Site].Lists["plans"].Request().GetAsync();
                 RadDataGrid.DataContext = list;
 
 
@@ -187,15 +200,17 @@ namespace MetaPlanner
         /// <summary>
         /// Pattern of Call Commando interactive - Description
         /// </summary>
-        private async void Pattern_Command(object sender, RoutedEventArgs e){
+        private async void Pattern_Command(object sender, RoutedEventArgs e) {
             try
             {
+                App.logger.Information("Start Command");
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
 
                 //TODO: Complete Code
 
 
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
+                App.logger.Information("End Command");
             }
             catch (Exception ex)
             {
@@ -204,80 +219,86 @@ namespace MetaPlanner
             }
         }
 
+        #region Plans
+
         /// <summary>
-        /// Call AcquireTokenAsync - to acquire a token requiring user to sign-in
+        /// Get all data from Plans from Planner in plannerPlans
+        /// </summary>
+        private async Task GetPlannerPlans()
+        {
+            var page = await GraphClient.Me.Planner.Plans.Request().GetAsync();
+            List<PlannerPlan> listPlanner = new List<PlannerPlan>();
+            while (page.Count > 0)
+            {
+                listPlanner.AddRange(page);
+                if (page.NextPageRequest != null)
+                {
+                    page = await page.NextPageRequest.GetAsync();
+                }
+                else
+                {
+                    break;
+                }
+            }
+            PlannerPlans = new Dictionary<string, MetaPlannerPlan>();
+            foreach (PlannerPlan p in listPlanner)
+            {
+                var group = await GraphClient.Groups[p.Owner].Request().GetAsync();
+                PlannerPlans.Add(p.Id,
+                    new MetaPlannerPlan()
+                    {
+                        PlanId = p.Id,
+                        PlanName = p.Title,
+                        CreatedBy = p.CreatedBy.User.Id,
+                        CreatedDate = p.CreatedDateTime,
+                        GroupName = group.DisplayName,
+                        GroupDescription = group.Description,
+                        GroupMail = group.Mail,
+                        Url = "https://tasks.office.com/" + config.Tenant + "/Home/PlanViews/" + p.Id
+                    });
+            }
+        }
+        
+        /// <summary>
+        /// Process Plans Data
         /// </summary>
         private async void ProcessPlans(object sender, RoutedEventArgs e)
         {
             try
             {
+                App.logger.Information("Start ProcessPlans");
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+                GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
-                #region Get bulk data from Planner
-                var page = await graphClient.Me.Planner.Plans.Request().GetAsync();
-                List<PlannerPlan> listPlanner = new List<PlannerPlan>();
-                while (page.Count > 0)
-                {
-                    listPlanner.AddRange(page);
-                    if (page.NextPageRequest != null)
-                    {
-                        page = await page.NextPageRequest.GetAsync();
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                Dictionary<string, MetaPlannerPlan> plannerPlans = new Dictionary<string, MetaPlannerPlan>();
+                await GetPlannerPlans();
 
-                foreach (PlannerPlan p in listPlanner)
-                {
-                    var group = await graphClient.Groups[p.Owner].Request().GetAsync();
-                    plannerPlans.Add(p.Id, 
-                        new MetaPlannerPlan()
-                        {
-                            PlanId = p.Id,
-                            PlanName = p.Title,
-                            CreatedBy = p.CreatedBy.User.Id,
-                            CreatedDate = p.CreatedDateTime,
-                            GroupName = group.DisplayName,
-                            GroupDescription = group.Description,
-                            GroupMail = group.Mail,
-                            Url = "https://tasks.office.com/"+config.Tenant+"/Home/PlanViews/" + p.Id
-                        });
-                }
-                
-                String prefix = String.Format("{0:D4}", DateTime.Now.Year) + "-" + String.Format("{0:D2}", DateTime.Now.Month) + "-" + String.Format("{0:D2}", DateTime.Now.Day) + "_" + String.Format("{0:D2}", DateTime.Now.Hour) + "_" + String.Format("{0:D2}", DateTime.Now.Minute) + "_" + String.Format("{0:D2}", DateTime.Now.Second);
-                Writer writer = new Writer();
-                //writer.Write(listPlan, storageFolder, "plans.csv");
-                writer.Write(plannerPlans, storageFolder, prefix + " plans.csv");
-
-                #endregion
-                
-
+                writer.Write(PlannerPlans, storageFolder, prefix + " plans.csv");
 
                 #region Get bulk data from SharePoint
                 var listPlans = await GetSharePointList("plans");
-                
+
                 Dictionary<string, MetaPlannerPlan> sharePointPlans = new Dictionary<string, MetaPlannerPlan>();
+                Dictionary<string, string> itemIds = new Dictionary<string, string>();
+                Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
 
                 foreach (ListItem item in listPlans)
                 {
                     MetaPlannerPlan plan = new MetaPlannerPlan(item.Fields.AdditionalData);
                     sharePointPlans.Add(plan.PlanId, plan);
+                    itemIds.Add(plan.PlanId, item.Id);
+                    items.Add(item.Id, item);
                 }
-                writer.Write(sharePointPlans, storageFolder, prefix + " plansSP.csv");
+
                 #endregion
 
+                await ConciliationPlans(sharePointPlans, itemIds, items);
 
-                RadDataGrid.DataContext = sharePointPlans.Values;
-
-
+                RadDataGrid.DataContext = PlannerPlans.Values;
 
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
-                }
+                App.logger.Information("End ProcessPlans");
+            }
             catch (Exception ex)
             {
                 await DisplayMessageAsync($"ProcessPlans:{System.Environment.NewLine}{ex}");
@@ -285,6 +306,652 @@ namespace MetaPlanner
                 return;
             }
         }
+
+        private async Task ConciliationPlans(Dictionary<string, MetaPlannerPlan> sharePointPlans, Dictionary<string, string> itemIds, Dictionary<string, ListItem> items)
+        {
+
+            #region Add from planner not in sharepoint
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, MetaPlannerPlan> entry in PlannerPlans)
+            {
+                if ( ! sharePointPlans.ContainsKey(entry.Key))
+                {
+                    var planItem = new ListItem
+                    {
+                        Fields = new FieldValueSet
+                        {
+                            AdditionalData = new Dictionary<string, object>()
+                            {
+                                {"Title", entry.Value.PlanId},
+                                {"PlanName", entry.Value.PlanName},
+                                {"CreatedBy", entry.Value.CreatedBy},
+                                {"CreatedDate", entry.Value.CreatedDate },
+                                {"GroupName",  entry.Value.GroupName },
+                                {"GroupDescription",  entry.Value.GroupDescription},
+                                {"GroupMail",  entry.Value.GroupMail},
+                                {"Url", entry.Value.Url}
+                            }
+                        }
+                    };
+                    await GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
+                }               
+            }
+            #endregion
+
+            #region Delete in sharepoint not in planner
+            //Delete from SharePoint not in Planner
+            foreach (KeyValuePair<string, MetaPlannerPlan> entry in sharePointPlans)
+            {
+                if ( ! PlannerPlans.ContainsKey(entry.Key))
+                {
+                    await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                }
+            }
+            #endregion
+
+            #region Update in Sharepoint changes from planner
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, MetaPlannerPlan> entry in PlannerPlans)
+            {
+                if (sharePointPlans.ContainsKey(entry.Key))
+                {
+                    MetaPlannerPlan origin = PlannerPlans[entry.Key];
+                    MetaPlannerPlan destination = sharePointPlans[entry.Key];
+
+                    Dictionary<string, object> additionalData = new Dictionary<string, object>();
+                    if (!String.Equals(origin.PlanName, destination.PlanName))
+                    {
+                        additionalData.Add("PlanName", origin.PlanName);
+                    }
+                    if (! String.Equals(origin.GroupDescription, destination.GroupDescription))
+                    {
+                        additionalData.Add("GroupDescription", origin.GroupDescription);
+                    }
+                    if (!String.Equals(origin.GroupMail, destination.GroupMail))
+                    {
+                        additionalData.Add("GroupMail", origin.GroupMail);
+                    }
+                    if (!String.Equals(origin.GroupName, destination.GroupName))
+                    {
+                        additionalData.Add("GroupName", origin.GroupName);
+                    }
+
+                    if (additionalData.Keys.Count > 0)
+                    {
+                        FieldValueSet fieldsChange = new FieldValueSet();
+                        fieldsChange.AdditionalData = additionalData;
+                        await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                    }
+                }
+            }
+            #endregion
+        }
+        #endregion
+
+
+        #region Buckets
+
+        /// <summary>
+        /// Get all data from Plans from Planner in plannerPlans
+        /// </summary>
+        private async Task GetPlannerBuckets()
+        {
+            if (PlannerPlans == null)
+            {
+                await GetPlannerPlans();
+            }
+
+            PlannerBuckets = new Dictionary<string, MetaPlannerBucket>();
+            foreach (MetaPlannerPlan plan in PlannerPlans.Values)
+            {
+                var buckets = await GraphClient.Planner.Plans[plan.PlanId].Buckets.Request().GetAsync();
+                List<PlannerBucket> listBuckets = new List<PlannerBucket>();
+                while (buckets.Count > 0)
+                {
+                    listBuckets.AddRange(buckets);
+                    if (buckets.NextPageRequest != null)
+                    {
+                        buckets = await buckets.NextPageRequest.GetAsync();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+               
+                foreach (PlannerBucket bucket in listBuckets)
+                {
+                    PlannerBuckets.Add(bucket.Id,new MetaPlannerBucket()
+                    {
+                        BucketId = bucket.Id,
+                        BucketName = bucket.Name,
+                        OrderHint = bucket.OrderHint,
+                        PlanId = plan.PlanId
+                    });
+                }
+            }
+        }
+
+        /// <summary
+        /// Process Buckets Data
+        /// </summary>
+        private async void ProcessBuckets(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                App.logger.Information("Start ProcessBuckets");
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
+                // Sign-in user using MSAL and obtain an access token for MS Graph
+                GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+
+                await GetPlannerBuckets();
+
+                writer.Write(PlannerPlans, storageFolder, prefix + " buckets.csv");
+
+                #region Get bulk data from SharePoint
+                var listBuckets = await GetSharePointList("buckets");
+
+                Dictionary<string, MetaPlannerBucket> sharePointBuckets = new Dictionary<string, MetaPlannerBucket>();
+                Dictionary<string, string> itemIds = new Dictionary<string, string>();
+                Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
+
+                foreach (ListItem item in listBuckets)
+                {
+                    MetaPlannerBucket bucket = new MetaPlannerBucket(item.Fields.AdditionalData);
+                    sharePointBuckets.Add(bucket.BucketId, bucket);
+                    itemIds.Add(bucket.BucketId, item.Id);
+                    items.Add(item.Id, item);
+                }
+                #endregion
+
+
+                await ConciliationBuckets(sharePointBuckets, itemIds, items);
+
+                RadDataGrid.DataContext = PlannerBuckets.Values;
+
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
+                App.logger.Information("End ProcessBuckets");
+            }
+            catch (Exception ex)
+            {
+                await DisplayMessageAsync($"ProcessBuckets:{System.Environment.NewLine}{ex}");
+                App.logger.Error(ex.Message);
+                return;
+            }
+        }
+
+        private async Task ConciliationBuckets(Dictionary<string, MetaPlannerBucket> sharePointBuckets, Dictionary<string, string> itemIds, Dictionary<string, ListItem> items)
+        {
+
+            #region Add from planner not in sharepoint
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, MetaPlannerBucket> entry in PlannerBuckets)
+            {
+                if (!sharePointBuckets.ContainsKey(entry.Key))
+                {
+                    var bucketItem = new ListItem
+                    {
+                        Fields = new FieldValueSet
+                        {
+                            AdditionalData = new Dictionary<string, object>()
+                            {
+                                {"Title", entry.Value.BucketId},
+                                {"BucketName", entry.Value.BucketName},
+                                {"PlanId", entry.Value.PlanId},
+                                {"OrderHint", entry.Value.OrderHint }
+                            }
+                        }
+                    };
+                    await GraphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+                }
+            }
+            #endregion
+
+            #region Delete in SharePoint not in planner
+            //Delete from SharePoint not in Planner
+            foreach (KeyValuePair<string, MetaPlannerBucket> entry in sharePointBuckets)
+            {
+                if (! PlannerBuckets.ContainsKey(entry.Key))
+                {
+                    await GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                }
+            }
+            #endregion
+
+            #region Update in Sharepoint changes from planner
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, MetaPlannerBucket> entry in PlannerBuckets)
+            {
+                if (sharePointBuckets.ContainsKey(entry.Key))
+                {
+                    MetaPlannerBucket origin = PlannerBuckets[entry.Key];
+                    MetaPlannerBucket destination = sharePointBuckets[entry.Key];
+
+                    Dictionary<string, object> additionalData = new Dictionary<string, object>();
+                    if (!String.Equals(origin.BucketName, destination.BucketName))
+                    {
+                        additionalData.Add("BucketName", origin.BucketName);
+                    }
+                    if (!String.Equals(origin.OrderHint, destination.OrderHint))
+                    {
+                        additionalData.Add("OrderHint", origin.OrderHint);
+                    }
+                    if (additionalData.Keys.Count > 0)
+                    {
+                        FieldValueSet fieldsChange = new FieldValueSet();
+                        fieldsChange.AdditionalData = additionalData;
+                        await GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                    }
+                }
+            }
+            #endregion
+        }
+
+        #endregion
+
+
+        #region Tasks
+
+        /// <summary>
+        /// Get all data from Plans from Planner in plannerPlans
+        /// </summary>
+        private async Task GetPlannerTasks()
+        {
+            if (PlannerPlans == null)
+            {
+                await GetPlannerPlans();
+            }
+
+            PlannerTasks = new Dictionary<string, MetaPlannerTask>();
+            foreach (MetaPlannerPlan plan in PlannerPlans.Values)
+            {
+                var tasks = await GraphClient.Planner.Plans[plan.PlanId].Tasks.Request().GetAsync();
+                List<PlannerTask> listTasks = new List<PlannerTask>();
+                while (tasks.Count > 0)
+                {
+                    listTasks.AddRange(tasks);
+                    if (tasks.NextPageRequest != null)
+                    {
+                        tasks = await tasks.NextPageRequest.GetAsync();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                foreach (PlannerTask task in listTasks)
+                {
+                    MetaPlannerTask myTask = new MetaPlannerTask() { TaskId = task.Id, Hours = "0" };
+
+                    int j = task.Title.IndexOf(";");
+                    if (j == -1)
+                    {
+                        myTask.TaskName = task.Title.Trim();
+                    }
+                    else
+                    {
+                        myTask.Prefix = task.Title.Substring(0, j).Trim().ToUpper();
+
+                        string two = task.Title.Substring(j + 1).Trim();
+                        int k = two.IndexOf(";");
+                        if (k == -1)
+                        {
+                            myTask.TaskName = two.Trim();
+                        }
+                        else
+                        {
+                            myTask.Hours = two.Substring(0, k).Trim();
+                            myTask.TaskName = two.Substring(k + 1).Trim();
+                        }
+                    }
+
+                    #region TaskBody
+                    myTask.PlanId = task.PlanId;
+                    myTask.ActiveChecklistItemCount = task.ActiveChecklistItemCount.ToString();
+                    myTask.AdditionalData = task.AdditionalData.Count.ToString();
+                    myTask.Category1 = task.AppliedCategories.Category1.ToString(); 
+                    myTask.Category2 = task.AppliedCategories.Category2.ToString();
+                    myTask.Category3 = task.AppliedCategories.Category3.ToString();
+                    myTask.Category4 = task.AppliedCategories.Category4.ToString();
+                    myTask.Category5 = task.AppliedCategories.Category5.ToString();
+                    myTask.Category6 = task.AppliedCategories.Category6.ToString();
+                    myTask.AssigneePriority = task.AssigneePriority;
+                    myTask.AssignmentsCount = task.Assignments.Count.ToString();
+                    myTask.BucketId = task.BucketId;
+                    myTask.ChecklistItemCount = task.ChecklistItemCount.ToString();
+                    if (task.CompletedBy != null)
+                        myTask.CompletedBy = task.CompletedBy.User.Id;
+                    myTask.CompletedDateTime = task.CompletedDateTime.ToString();
+                    myTask.ConversationThreadId = task.ConversationThreadId;
+                    myTask.CreatedBy = task.CreatedBy.User.Id;
+                    myTask.CreatedDateTime = task.CreatedDateTime.ToString();
+                    myTask.DueDateTime = task.DueDateTime.ToString();
+                    myTask.HasDescription = task.HasDescription.ToString();
+                    myTask.OrderHint = task.OrderHint;
+                    myTask.PercentComplete = task.PercentComplete.ToString();
+                    myTask.ReferenceCount = task.ReferenceCount.ToString();
+                    myTask.StartDateTime = task.StartDateTime.ToString();
+                    myTask.Url = "https://tasks.office.com/"+config.Tenant+"/es-es/Home/Task/" + task.Id;
+                    #endregion
+                    
+                    PlannerTasks.Add(myTask.TaskId, myTask);
+                }
+           
+            }
+        }
+
+        /// <summary
+        /// Process Task Data
+        /// </summary>
+        private async void ProcessTasks(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                App.logger.Information("Start ProcessTasks");
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
+                // Sign-in user using MSAL and obtain an access token for MS Graph
+                GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+
+                await GetPlannerTasks();
+
+                writer.Write(PlannerPlans, storageFolder, prefix + " tasks.csv");
+
+                #region Get bulk data from SharePoint
+                var listTasks = await GetSharePointList("tasks");
+
+                Dictionary<string, MetaPlannerTask> sharePointTasks = new Dictionary<string, MetaPlannerTask>();
+                Dictionary<string, string> itemIds = new Dictionary<string, string>();
+                Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
+
+                foreach (ListItem item in listTasks)
+                {
+                    MetaPlannerTask task = new MetaPlannerTask(item.Fields.AdditionalData);
+                    sharePointTasks.Add(task.TaskId, task);
+                    itemIds.Add(task.TaskId, item.Id);
+                    items.Add(item.Id, item);
+                }
+                #endregion
+
+
+                await ConciliationTasks(sharePointTasks, itemIds, items);
+
+                RadDataGrid.DataContext = PlannerTasks.Values;
+
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
+                App.logger.Information("End ProcessTasks");
+            }
+            catch (Exception ex)
+            {
+                await DisplayMessageAsync($"ProcessTasks:{System.Environment.NewLine}{ex}");
+                App.logger.Error(ex.Message);
+                return;
+            }
+        }
+
+        private async Task ConciliationTasks(Dictionary<string, MetaPlannerTask> sharePointTasks, Dictionary<string, string> itemIds, Dictionary<string, ListItem> items)
+        {
+            int add = 0;
+            int del = 0;
+            int upd = 0;
+
+            #region Add from planner not in sharepoint
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, MetaPlannerTask> entry in PlannerTasks)
+            {
+                if (!sharePointTasks.ContainsKey(entry.Key))
+                {
+                    var taskItem = new ListItem
+                    {
+                        Fields = new FieldValueSet
+                        {
+                            AdditionalData = new Dictionary<string, object>()
+                            {
+                                {"Title", entry.Value.TaskId},
+                                {"TaskName", entry.Value.TaskName},
+                                {"Prefix", entry.Value.Prefix},
+                                {"Hours", entry.Value.Hours },
+                                {"ActiveChecklistItemCount", entry.Value.ActiveChecklistItemCount },
+                                {"AdditionalData", entry.Value.AdditionalData },
+                                {"Category1", entry.Value.Category1 },
+                                {"Category2", entry.Value.Category2 },
+                                {"Category3", entry.Value.Category3 },
+                                {"Category4", entry.Value.Category4 },
+                                {"Category5", entry.Value.Category5 },
+                                {"Category6", entry.Value.Category6 },
+                                {"AssigneePriority", entry.Value.AssigneePriority },
+                                {"AssignmentsCount", entry.Value.AssignmentsCount },
+                                {"BucketId", entry.Value.BucketId },
+                                {"PlanId", entry.Value.PlanId },
+                                {"ChecklistItemCount", entry.Value.ChecklistItemCount },
+                                {"CompletedBy", entry.Value.CompletedBy },
+                                {"CompletedDateTime", entry.Value.CompletedDateTime },
+                                {"ConversationThreadId", entry.Value.ConversationThreadId },
+                                {"CreatedBy", entry.Value.CreatedBy },
+                                {"CreatedDateTime", entry.Value.CreatedDateTime },
+                                {"DueDateTime", entry.Value.DueDateTime },
+                                {"HasDescription", entry.Value.HasDescription },
+                                {"OrderHint", entry.Value.OrderHint },
+                                {"PercentComplete", entry.Value.PercentComplete },
+                                {"ReferenceCount", entry.Value.ReferenceCount },
+                                {"StartDateTime", entry.Value.StartDateTime },
+                                {"Url", entry.Value.Url }
+                            }
+                        }
+                    };
+                    try
+                    {
+                        var a = await GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
+                        add++;
+                    }
+                    catch (Exception exAdd)
+                    {
+                        await DisplayMessageAsync($"Error Adding:{System.Environment.NewLine}{exAdd}");
+                        App.logger.Error(exAdd.Message);
+                    }
+                }
+            }
+            #endregion
+
+            #region Delete in SharePoint not in planner
+            //Delete from SharePoint not in Planner
+            foreach (KeyValuePair<string, MetaPlannerTask> entry in sharePointTasks)
+            {
+                if (!PlannerTasks.ContainsKey(entry.Key))
+                {
+                    try
+                    {
+                        await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        del++;
+                    }
+                    catch (Exception exDel)
+                    {
+                        await DisplayMessageAsync($"Error Deleting:{System.Environment.NewLine}{exDel}");
+                        App.logger.Error(exDel.Message);
+                    }
+                }
+            }
+            #endregion
+
+            #region Update in Sharepoint changes from planner
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, MetaPlannerTask> entry in PlannerTasks)
+            {
+                if (sharePointTasks.ContainsKey(entry.Key))
+                {
+                    MetaPlannerTask origin = PlannerTasks[entry.Key];
+                    MetaPlannerTask destination = sharePointTasks[entry.Key];
+
+                    Dictionary<string, object> additionalData = new Dictionary<string, object>();
+                    if (!String.Equals(origin.TaskName, destination.TaskName))
+                    {
+                        additionalData.Add("TaskName", origin.TaskName);
+                    }
+                    #region Changes
+                    if (!String.Equals(origin.Prefix, destination.Prefix))
+                    {
+                        additionalData.Add("Prefix", origin.Prefix);
+                    }
+
+                    if (!String.Equals(origin.Hours, destination.Hours))
+                    {
+                        additionalData.Add("Hours", origin.Hours);
+                    }
+
+                    if (!String.Equals(origin.ActiveChecklistItemCount, destination.ActiveChecklistItemCount))
+                    {
+                        additionalData.Add("ActiveChecklistItemCount", origin.ActiveChecklistItemCount);
+                    }
+
+                    if (!String.Equals(origin.AdditionalData, destination.AdditionalData))
+                    {
+                        additionalData.Add("AdditionalData", origin.AdditionalData);
+                    }
+
+                    if (!String.Equals(origin.Category1, destination.Category1))
+                    {
+                        additionalData.Add("Category1", origin.Category1);
+                    }
+
+                    if (!String.Equals(origin.Category2, destination.Category2))
+                    {
+                        additionalData.Add("Category2", origin.Category2);
+                    }
+
+                    if (!String.Equals(origin.Category3, destination.Category3))
+                    {
+                        additionalData.Add("Category3", origin.Category3);
+                    }
+
+                    if (!String.Equals(origin.Category4, destination.Category4))
+                    {
+                        additionalData.Add("Category4", origin.Category4);
+                    }
+
+                    if (!String.Equals(origin.Category5, destination.Category5))
+                    {
+                        additionalData.Add("Category5", origin.Category5);
+                    }
+
+                    if (!String.Equals(origin.Category6, destination.Category6))
+                    {
+                        additionalData.Add("Category6", origin.Category6);
+                    }
+
+                    if (!String.Equals(origin.AssigneePriority, destination.AssigneePriority))
+                    {
+                        additionalData.Add("AssigneePriority", origin.AssigneePriority);
+                    }
+
+                    if (!String.Equals(origin.AssignmentsCount, destination.AssignmentsCount))
+                    {
+                        additionalData.Add("AssignmentsCount", origin.AssignmentsCount);
+                    }
+
+                    if (!String.Equals(origin.BucketId, destination.BucketId))
+                    {
+                        additionalData.Add("BucketId", origin.BucketId);
+                    }
+
+                    if (!String.Equals(origin.PlanId, destination.PlanId))
+                    {
+                        additionalData.Add("PlanId", origin.PlanId);
+                    }
+
+                    if (!String.Equals(origin.ChecklistItemCount, destination.ChecklistItemCount))
+                    {
+                        additionalData.Add("ChecklistItemCount", origin.ChecklistItemCount);
+                    }
+
+                    if (!String.Equals(origin.CompletedBy, destination.CompletedBy))
+                    {
+                        additionalData.Add("CompletedBy", origin.CompletedBy);
+                    }
+
+                    if (!String.Equals(origin.CompletedDateTime, destination.CompletedDateTime))
+                    {
+                        additionalData.Add("CompletedDateTime", origin.CompletedDateTime);
+                    }
+
+                    if (!String.Equals(origin.ConversationThreadId, destination.ConversationThreadId))
+                    {
+                        additionalData.Add("ConversationThreadId", origin.ConversationThreadId);
+                    }
+
+                    if (!String.Equals(origin.CreatedBy, destination.CreatedBy))
+                    {
+                        additionalData.Add("CreatedBy", origin.CreatedBy);
+                    }
+
+                    if (!String.Equals(origin.CreatedDateTime, destination.CreatedDateTime))
+                    {
+                        additionalData.Add("CreatedDateTime", origin.CreatedDateTime);
+                    }
+
+                    if (!String.Equals(origin.DueDateTime, destination.DueDateTime))
+                    {
+                        additionalData.Add("DueDateTime", origin.DueDateTime);
+                    }
+
+                    if (!String.Equals(origin.HasDescription, destination.HasDescription))
+                    {
+                        additionalData.Add("HasDescription", origin.HasDescription);
+                    }
+
+                    if (!String.Equals(origin.OrderHint, destination.OrderHint))
+                    {
+                        additionalData.Add("OrderHint", origin.OrderHint);
+                    }
+
+                    if (!String.Equals(origin.PercentComplete, destination.PercentComplete))
+                    {
+                        additionalData.Add("PercentComplete", origin.PercentComplete);
+                    }
+
+                    if (!String.Equals(origin.PlanId, destination.PlanId))
+                    {
+                        additionalData.Add("PlanId", origin.PlanId);
+                    }
+
+                    if (!String.Equals(origin.ReferenceCount, destination.ReferenceCount))
+                    {
+                        additionalData.Add("ReferenceCount", origin.ReferenceCount);
+                    }
+
+                    if (!String.Equals(origin.StartDateTime, destination.StartDateTime))
+                    {
+                        additionalData.Add("StartDateTime", origin.StartDateTime);
+                    }
+                    #endregion
+                    if (!String.Equals(origin.Url, destination.Url))
+                    {
+                        additionalData.Add("Url", origin.Url);
+                    }
+
+                    if (additionalData.Keys.Count > 0)
+                    {
+                        FieldValueSet fieldsChange = new FieldValueSet();
+                        fieldsChange.AdditionalData = additionalData;
+
+                        try
+                        {
+                            var u = await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                            upd++;
+                        }
+                        catch (Exception exUpd)
+                        {
+                            await DisplayMessageAsync($"Error Updating:{System.Environment.NewLine}{exUpd}");
+                            App.logger.Error(exUpd.Message);
+                        }                        
+                    }
+                }
+            }
+            #endregion
+
+            lblMessage.Text = "A: " + add + " D: " + del + " U:" + upd;
+        }
+
+        #endregion
 
 
         /// <summary>
@@ -296,15 +963,14 @@ namespace MetaPlanner
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
             RadDataGrid.StartBringIntoView();
 
-
             try
             {
                 // Sign-in user using MSAL and obtain an access token for MS Graph
-                graphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+                GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
                 //var users = await graphClient.Users.Request().GetAsync();
 
-                var plans = await graphClient.Me.Planner.Plans.Request().GetAsync();
+                var plans = await GraphClient.Me.Planner.Plans.Request().GetAsync();
 
                 List<MetaPlannerPlan> listPlan = new List<MetaPlannerPlan>();
                 List<MetaPlannerBucket> listBuckets = new List<MetaPlannerBucket>();
@@ -337,7 +1003,7 @@ namespace MetaPlanner
                 int counter = 0;
                 foreach (PlannerPlan p in allPlans)
                 {
-                    var group = await graphClient.Groups[p.Owner].Request().GetAsync();
+                    var group = await GraphClient.Groups[p.Owner].Request().GetAsync();
 
                     listPlan.Add(new MetaPlannerPlan()
                     {
@@ -370,12 +1036,12 @@ namespace MetaPlanner
                             }
                         }
                     };
-                    await graphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
+                    await GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
 
                     counter++;
 
 
-                    var buckets = await graphClient.Planner.Plans[p.Id].Buckets.Request().GetAsync();
+                    var buckets = await GraphClient.Planner.Plans[p.Id].Buckets.Request().GetAsync();
 
                     List<PlannerBucket> allBuckets = new List<PlannerBucket>();
                     while (buckets.Count > 0)
@@ -414,10 +1080,11 @@ namespace MetaPlanner
                                     }
                                 }
                         };
-                        await graphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+                        await GraphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
 
                     }
-                    var pTasks = await graphClient.Planner.Plans[p.Id].Tasks.Request().GetAsync();
+
+                    var pTasks = await GraphClient.Planner.Plans[p.Id].Tasks.Request().GetAsync();
 
 
                     List<PlannerTask> allTasks = new List<PlannerTask>();
@@ -499,9 +1166,7 @@ namespace MetaPlanner
                                         {"Title", myTask.TaskId},
                                         {"TaskName", myTask.TaskName},
                                         {"Prefix", myTask.Prefix},
-
                                         {"Hours", Convert.ToDecimal(myTask.Hours) },
-
                                         {"ActiveChecklistItemCount", t.ActiveChecklistItemCount},
                                         {"AdditionalData",  t.AdditionalData.Count},
                                         {"Category1", myTask.Category1},
@@ -530,7 +1195,7 @@ namespace MetaPlanner
                                     }
                             }
                         };
-                        await graphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
+                        await GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
 
                         counterT++;
 
@@ -566,7 +1231,7 @@ namespace MetaPlanner
                                     }
                                 }
                             };
-                            await graphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneesItem);
+                            await GraphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneesItem);
 
                         }
 

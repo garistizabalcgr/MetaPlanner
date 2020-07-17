@@ -28,7 +28,7 @@ namespace MetaPlanner
         {
             logger = new LoggerConfiguration()
                 .WriteTo.File(Windows.Storage.ApplicationData.Current.LocalFolder.Path + @"\MetaPlanner.log",
-                rollingInterval: RollingInterval.Minute,
+                rollingInterval: RollingInterval.Hour,
                 rollOnFileSizeLimit: true).CreateLogger();
             logger.Information("Start MetaPlanner");
 
