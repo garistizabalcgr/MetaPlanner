@@ -297,22 +297,37 @@ namespace MetaPlanner
                 else
                 {
 
-                    //var drives = await GraphClient.Sites[config.Site].Drives.Request().GetAsync();
-                   // var drive = await GraphClient.Sites[config.Site].Drives[config.Drive].Request().GetAsync();
-
                     var drive = await GraphClient.Sites[config.Site].Drive.Request().GetAsync();
 
-                   // var children = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children.Request().GetAsync();
+                    var folder = await GraphClient.Sites[config.Site].Drive.Root.Children["MetaPlanner"].Request().GetAsync();
+
+                    var file = await GraphClient.Sites[config.Site].Drive.Root.Children["plans.csv"].Request().GetAsync();
+
+                    //var lolo = await GraphClient.Sites[config.Site].Drive.Items.Request().GetAsync();
+
+                    var children = await GraphClient.Drives[drive.Id].Items[folder.Id].Children.Request().GetAsync();
+                    string fileId ="";
+                    foreach( DriveItem child in children)
+                    {
+                        if (child.Name.Equals("plans.csv"))
+                        {
+                            fileId = child.Id;
+                            break;
+                        }
+                    }
+                    if (!fileId.Equals(""))
+                    {
+                        var stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes("The contents of the file goes here."));
+
+                        await GraphClient.Sites[config.Site].Drive.Items[fileId].Content.Request().PutAsync<DriveItem>(stream);
+
+                    }
 
 
-                    var folder = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children["MetaPlanner"].Request().GetAsync();
-
-                    var filePlan = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children["plans.csv"].Request().GetAsync();
-
-                    var children = await GraphClient.Drives[config.Site].Items[folder.Id].Children.Request().GetAsync();
+                    //var children = await GraphClient.Drives[config.Site].Items[folder.Id].Children.Request().GetAsync();
 
 
-                   // var filePlan = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children["MetaPlanner/plans.csv"].Request().GetAsync();
+                    // var filePlan = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children["MetaPlanner/plans.csv"].Request().GetAsync();
 
 
 
