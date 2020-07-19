@@ -8,8 +8,31 @@ namespace MetaPlanner.Model
 {
     class MetaPlannerAssignment
     {
-        public string TaskId { get; set; }
-        public string UserId { get; set; }
+
+
+        public MetaPlannerAssignment()
+        {
+        }
+
+        public MetaPlannerAssignment(IDictionary<string, object> fields)
+        {
+            fields.TryGetValue("TaskId", out taskId);
+            fields.TryGetValue("UserId", out userId);
+        }
+
+        private object taskId;
+        public string TaskId
+        {
+            get { return taskId.ToString(); }
+            set { taskId = value; }
+        }
+
+        private object userId;
+        public string UserId
+        {
+            get { return userId.ToString(); }
+            set { userId = value; }
+        }
 
     }
 }

@@ -92,6 +92,10 @@ namespace MetaPlanner
 
         public string Site { get; set; }
 
+        public string Drive { get; set; }
+
+        public string IsSharePointListEbnabled { get; set; }
+
         /// <summary>
         /// Reads the configuration from a json file
         /// </summary>

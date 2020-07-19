@@ -30,10 +30,8 @@ namespace MetaPlanner
     public sealed partial class MainPage : Page
     {
 
+        // Configuration
         public static AuthenticationConfig config = AuthenticationConfig.ReadFromJsonFile();
-
-        //Set the scope for API call to user.read
-        //private string[] scopes = new string[] { "Group.Read.All", "Group.ReadWrite.All", "profile", "User.Read" };
 
         // The MSAL Public client GraphServiceClient
         private static IPublicClientApplication PublicClientApp;
@@ -41,22 +39,36 @@ namespace MetaPlanner
         // private static string MSGraphURL = "https://graph.microsoft.com/v1.0/";
         private static AuthenticationResult authResult;
 
-
+        //Folder of file storage
         private StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+
+        //Client to Cloud Service
+        private GraphServiceClient GraphClient;
+
+        //Dictionary of Plans
+        private Dictionary<string, MetaPlannerPlan> PlannerPlans = new Dictionary<string, MetaPlannerPlan>();
+
+        //Dictionary of Buckets
+        private Dictionary<string, MetaPlannerBucket> PlannerBuckets = new Dictionary<string, MetaPlannerBucket>();
+
+        //Dictionary of Tasks
+        private Dictionary<string, MetaPlannerTask> PlannerTasks = new Dictionary<string, MetaPlannerTask>();
+
+        //Dictionary of Assignments
+        private Dictionary<string, MetaPlannerAssignment> PlannerAssignments = new Dictionary<string, MetaPlannerAssignment>();
+
+        //Dictionary of Users
+        private Dictionary<string, MetaPlannerUser> PlannerUsers = new Dictionary<string, MetaPlannerUser>();
+
+        //Date of creation
+        private String prefix;
+
+        //Cvs writer of files
+        private Writer writer = new Writer();
 
         //string redirectURI = Windows.Security.Authentication.Web.WebAuthenticationBroker.GetCurrentApplicationCallbackUri().ToString();
         // ms-app://s-1-15-2-148375016-475961868-2312470711-1599034693-979352800-1769312473-2847594358/
 
-        private GraphServiceClient GraphClient;
-
-        private Dictionary<string, MetaPlannerPlan> PlannerPlans;
-
-        private Dictionary<string, MetaPlannerBucket> PlannerBuckets;
-
-        private Dictionary<string, MetaPlannerTask> PlannerTasks;
-
-        private String prefix;
-        private Writer writer = new Writer();
 
 
         public MainPage()
@@ -91,7 +103,7 @@ namespace MetaPlanner
             return allItems;
         }
 
-        private async void CleanSharepointList(string listName)
+        private async Task CleanSharepointList(string listName)
         {
             var items = await GraphClient.Sites[config.Site].Lists[listName].Items.Request().GetAsync();
             List<ListItem> allItems = new List<ListItem>();
@@ -118,21 +130,6 @@ namespace MetaPlanner
                     App.logger.Error(ex.Message);
                 }
             }
-
-            /*
-            StringBuilder sbDelete = new StringBuilder("<Batch>");
-            for (int x = allItems.Count - 1; x >= 0; x--)
-            {
-
-                sbDelete.Append("<Method>");
-                sbDelete.Append("<SetList Scope='Request'>" + allItems[x].Id.ToString() + "</SetList>");
-                sbDelete.Append("<SetVar Name='Cmd'>DELETE</SetVar>");
-                sbDelete.Append("<SetVar Name='ID'>listItems[x].ID</SetVar>");
-                sbDelete.Append("</Method>");
-            }
-            sbDelete.Append("</Batch>");
-            web.AllowUnsafeUpdates = True;
-            web.ProcessBatchData(sbDelete.ToString());*/
         }
 
         private async void CleanAllSharePointLists(object sender, RoutedEventArgs e)
@@ -140,11 +137,12 @@ namespace MetaPlanner
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
 
             GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
-            CleanSharepointList("assignees");
-            CleanSharepointList("tasks");
-            CleanSharepointList("buckets");
-            CleanSharepointList("plans");
-            CleanSharepointList("users");
+
+            await CleanSharepointList("users");
+            await CleanSharepointList("assignees");
+            await CleanSharepointList("tasks");
+            await CleanSharepointList("buckets");
+            await CleanSharepointList("plans");
 
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
         }
@@ -271,28 +269,76 @@ namespace MetaPlanner
                 // Sign-in user using MSAL and obtain an access token for MS Graph
                 GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
-                await GetPlannerPlans();
+               // await GetPlannerPlans();
 
-                writer.Write(PlannerPlans, storageFolder, prefix + " plans.csv");
+              //  writer.Write(PlannerPlans, storageFolder, prefix + " plans.csv");
 
-                #region Get bulk data from SharePoint
-                var listPlans = await GetSharePointList("plans");
 
-                Dictionary<string, MetaPlannerPlan> sharePointPlans = new Dictionary<string, MetaPlannerPlan>();
-                Dictionary<string, string> itemIds = new Dictionary<string, string>();
-                Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
-
-                foreach (ListItem item in listPlans)
+                if (config.IsSharePointListEbnabled.Equals("true"))
                 {
-                    MetaPlannerPlan plan = new MetaPlannerPlan(item.Fields.AdditionalData);
-                    sharePointPlans.Add(plan.PlanId, plan);
-                    itemIds.Add(plan.PlanId, item.Id);
-                    items.Add(item.Id, item);
+                    #region Get bulk data from SharePoint
+                    var listPlans = await GetSharePointList("plans");
+
+                    Dictionary<string, MetaPlannerPlan> sharePointPlans = new Dictionary<string, MetaPlannerPlan>();
+                    Dictionary<string, string> itemIds = new Dictionary<string, string>();
+                    Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
+
+                    foreach (ListItem item in listPlans)
+                    {
+                        MetaPlannerPlan plan = new MetaPlannerPlan(item.Fields.AdditionalData);
+                        sharePointPlans.Add(plan.PlanId, plan);
+                        itemIds.Add(plan.PlanId, item.Id);
+                        items.Add(item.Id, item);
+                    }
+
+                    #endregion
+                    await ConciliationPlans(sharePointPlans, itemIds, items);
                 }
+                else
+                {
 
-                #endregion
+                    //var drives = await GraphClient.Sites[config.Site].Drives.Request().GetAsync();
+                   // var drive = await GraphClient.Sites[config.Site].Drives[config.Drive].Request().GetAsync();
 
-                await ConciliationPlans(sharePointPlans, itemIds, items);
+                    var drive = await GraphClient.Sites[config.Site].Drive.Request().GetAsync();
+
+                   // var children = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children.Request().GetAsync();
+
+
+                    var folder = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children["MetaPlanner"].Request().GetAsync();
+
+                    var filePlan = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children["plans.csv"].Request().GetAsync();
+
+                    var children = await GraphClient.Drives[config.Site].Items[folder.Id].Children.Request().GetAsync();
+
+
+                   // var filePlan = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children["MetaPlanner/plans.csv"].Request().GetAsync();
+
+
+
+                    /*var targetFolder = GraphClient.Sites[config.Site].Lists[listId]
+       .Drive
+       .Root;*/
+
+                    // var items = await GraphClient.Sites[config.Site].Drives[drives[0].Id].Items.Request().GetAsync();
+
+                    //  var driveItem = new DriveItem { Name = storageFolder.Path + prefix + " plans.csv" };
+
+                    //var res = await GraphClient.Sites[config.Site].Drives[drives[0].Id].Items["{item-id}"].Request().UpdateAsync(driveItem);
+
+                    /*
+                     *  //3.Upload a file
+ var pathToFile = @"c:\Temp\Guide.docx";
+ using (var fileStream = new FileStream(pathToFile, FileMode.Open, FileAccess.Read))
+ {
+      var uploadedItem = await targetFolder
+        .ItemWithPath("Guide.docx")
+        .Content
+        .Request()
+        .PutAsync<DriveItem>(fileStream);
+ }
+                     * */
+                }
 
                 RadDataGrid.DataContext = PlannerPlans.Values;
 
@@ -396,7 +442,7 @@ namespace MetaPlanner
         /// </summary>
         private async Task GetPlannerBuckets()
         {
-            if (PlannerPlans == null)
+            if (PlannerPlans == null || PlannerPlans.Count == 0)
             {
                 await GetPlannerPlans();
             }
@@ -557,12 +603,15 @@ namespace MetaPlanner
         /// </summary>
         private async Task GetPlannerTasks()
         {
-            if (PlannerPlans == null)
+            if (PlannerPlans == null || PlannerPlans.Count == 0)
             {
                 await GetPlannerPlans();
             }
 
             PlannerTasks = new Dictionary<string, MetaPlannerTask>();
+            PlannerAssignments = new Dictionary<string, MetaPlannerAssignment>();
+            PlannerUsers = new Dictionary<string, MetaPlannerUser>();
+
             foreach (MetaPlannerPlan plan in PlannerPlans.Values)
             {
                 var tasks = await GraphClient.Planner.Plans[plan.PlanId].Tasks.Request().GetAsync();
@@ -584,6 +633,7 @@ namespace MetaPlanner
                 {
                     MetaPlannerTask myTask = new MetaPlannerTask() { TaskId = task.Id, Hours = "0" };
 
+                    #region Task custom fields
                     int j = task.Title.IndexOf(";");
                     if (j == -1)
                     {
@@ -605,6 +655,7 @@ namespace MetaPlanner
                             myTask.TaskName = two.Substring(k + 1).Trim();
                         }
                     }
+                    #endregion
 
                     #region TaskBody
                     myTask.PlanId = task.PlanId;
@@ -636,8 +687,44 @@ namespace MetaPlanner
                     #endregion
                     
                     PlannerTasks.Add(myTask.TaskId, myTask);
+                    GetPlannerAssignment(task);
                 }
            
+            }
+        }
+
+        /// <summary
+        /// Process Task Data
+        /// </summary>
+        /// 
+        private void GetPlannerAssignment(PlannerTask task)
+        {
+            foreach (string userId in task.Assignments.Assignees)
+            {
+                PlannerAssignments.Add(task.Id+"_"+userId,new MetaPlannerAssignment()
+                {
+                    TaskId = task.Id,
+                    UserId = userId
+                });
+
+                // var filter = $""; // What goes here?
+                // var users = await GraphClient.Users.Request().Filter(filter).GetAsync();
+
+               // var securityEnabledOnly = true;
+
+               // var yy = await GraphClient.Me.GetMemberObjects(securityEnabledOnly).Request().PostAsync();
+                //var xx = await GraphClient.Me.GetMemberGroups(securityEnabledOnly).Request().PostAsync();
+
+                // var user = await GraphClient.Users.Request().GetAsync();
+                /* PlannerUsers.Add(userId, new MetaPlannerUser()
+                 {
+                     UserId = user.Id,
+                     UserPrincipalName = user.UserPrincipalName,
+                     Mail = user.Mail,
+                     DisplayName = user.DisplayName,
+                     Department = user.Department,
+                     JobTitle = user.JobTitle
+                 });*/
             }
         }
 
@@ -655,7 +742,10 @@ namespace MetaPlanner
 
                 await GetPlannerTasks();
 
-                writer.Write(PlannerPlans, storageFolder, prefix + " tasks.csv");
+                writer.Write(PlannerTasks, storageFolder, prefix + " tasks.csv");
+
+                writer.Write(PlannerAssignments, storageFolder, prefix + " assignees.csv");
+
 
                 #region Get bulk data from SharePoint
                 var listTasks = await GetSharePointList("tasks");
@@ -952,6 +1042,8 @@ namespace MetaPlanner
         }
 
         #endregion
+
+
 
 
         /// <summary>
