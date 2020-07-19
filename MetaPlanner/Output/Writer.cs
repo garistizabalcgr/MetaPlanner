@@ -18,6 +18,7 @@ namespace MetaPlanner.Output
             var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
             csv.Configuration.HasHeaderRecord = true;
             csv.WriteRecords(list);
+            writer.Close();
         }
     }
 }

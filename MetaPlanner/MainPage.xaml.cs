@@ -271,7 +271,8 @@ namespace MetaPlanner
 
                // await GetPlannerPlans();
 
-              //  writer.Write(PlannerPlans, storageFolder, prefix + " plans.csv");
+               writer.Write(PlannerPlans, storageFolder, prefix + " plans.csv");
+
 
 
                 if (config.IsSharePointListEbnabled.Equals("true"))
@@ -299,60 +300,23 @@ namespace MetaPlanner
 
                     var drive = await GraphClient.Sites[config.Site].Drive.Request().GetAsync();
 
-                    var folder = await GraphClient.Sites[config.Site].Drive.Root.Children["MetaPlanner"].Request().GetAsync();
-
                     var file = await GraphClient.Sites[config.Site].Drive.Root.Children["plans.csv"].Request().GetAsync();
 
-                    //var lolo = await GraphClient.Sites[config.Site].Drive.Items.Request().GetAsync();
 
-                    var children = await GraphClient.Drives[drive.Id].Items[folder.Id].Children.Request().GetAsync();
-                    string fileId ="";
-                    foreach( DriveItem child in children)
-                    {
-                        if (child.Name.Equals("plans.csv"))
-                        {
-                            fileId = child.Id;
-                            break;
-                        }
-                    }
-                    if (!fileId.Equals(""))
-                    {
-                        var stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes("The contents of the file goes here."));
+                    FileStream fsNew = new FileStream(storageFolder.Path + "\\plans.csv", FileMode.Open, FileAccess.Read);
+                    DriveItem driveItemNew = new DriveItem();
+                    driveItemNew.Name = "plans.csv";
+                    driveItemNew.File = new Microsoft.Graph.File();
+                    var resNew = await GraphClient.Sites[config.Site].Drive.Items[file.Id].Content.Request().PutAsync<DriveItem>(fsNew);
 
-                        await GraphClient.Sites[config.Site].Drive.Items[fileId].Content.Request().PutAsync<DriveItem>(stream);
-
-                    }
+                    FileStream fs = new FileStream(storageFolder.Path + "\\plans.csv", FileMode.Open, FileAccess.Read);
+                    DriveItem driveItem = new DriveItem();
+                    driveItem.Name = prefix+" plans.csv";
+                    driveItem.File = new Microsoft.Graph.File();
+                    driveItem = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(driveItem);
+                    var res = await GraphClient.Sites[config.Site].Drive.Items[driveItem.Id].Content.Request().PutAsync<DriveItem>(fs);
 
 
-                    //var children = await GraphClient.Drives[config.Site].Items[folder.Id].Children.Request().GetAsync();
-
-
-                    // var filePlan = await GraphClient.Sites[config.Site].Drives[config.Drive].Root.Children["MetaPlanner/plans.csv"].Request().GetAsync();
-
-
-
-                    /*var targetFolder = GraphClient.Sites[config.Site].Lists[listId]
-       .Drive
-       .Root;*/
-
-                    // var items = await GraphClient.Sites[config.Site].Drives[drives[0].Id].Items.Request().GetAsync();
-
-                    //  var driveItem = new DriveItem { Name = storageFolder.Path + prefix + " plans.csv" };
-
-                    //var res = await GraphClient.Sites[config.Site].Drives[drives[0].Id].Items["{item-id}"].Request().UpdateAsync(driveItem);
-
-                    /*
-                     *  //3.Upload a file
- var pathToFile = @"c:\Temp\Guide.docx";
- using (var fileStream = new FileStream(pathToFile, FileMode.Open, FileAccess.Read))
- {
-      var uploadedItem = await targetFolder
-        .ItemWithPath("Guide.docx")
-        .Content
-        .Request()
-        .PutAsync<DriveItem>(fileStream);
- }
-                     * */
                 }
 
                 RadDataGrid.DataContext = PlannerPlans.Values;
