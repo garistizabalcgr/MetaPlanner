@@ -17,6 +17,7 @@ using System.Text;
 using Serilog;
 using System.Xml.Serialization;
 using Windows.UI.Xaml.Data;
+using System.Collections.Immutable;
 
 
 
@@ -61,9 +62,14 @@ namespace MetaPlanner
         private Dictionary<string, MetaPlannerUser> PlannerUsers = new Dictionary<string, MetaPlannerUser>();
 
         //Date of creation
-        private String prefix;
-
-        //Cvs writer of files
+        private String TimeStamp
+        {
+            get
+            {
+                return String.Format("{0:D4}", DateTime.Now.Year) + "-" + String.Format("{0:D2}", DateTime.Now.Month) + "-" + String.Format("{0:D2}", DateTime.Now.Day) + "_" + String.Format("{0:D2}", DateTime.Now.Hour) + "_" + String.Format("{0:D2}", DateTime.Now.Minute) + "_" + String.Format("{0:D2}", DateTime.Now.Second);
+            }
+        }
+        //Cvs writer of files}
         private Writer writer = new Writer();
 
         //string redirectURI = Windows.Security.Authentication.Web.WebAuthenticationBroker.GetCurrentApplicationCallbackUri().ToString();
@@ -73,7 +79,7 @@ namespace MetaPlanner
 
         public MainPage()
         {
-            prefix = String.Format("{0:D4}", DateTime.Now.Year) + "-" + String.Format("{0:D2}", DateTime.Now.Month) + "-" + String.Format("{0:D2}", DateTime.Now.Day) + "_" + String.Format("{0:D2}", DateTime.Now.Hour) + "_" + String.Format("{0:D2}", DateTime.Now.Minute) + "_" + String.Format("{0:D2}", DateTime.Now.Second);
+           
             this.InitializeComponent();
             lblMessage.Text = config.Tenant;
         }
@@ -217,6 +223,53 @@ namespace MetaPlanner
             }
         }
 
+        private async Task WriteAndUpload(System.Collections.IDictionary dictionary, string name)
+        {
+            string fileName = name + ".csv";
+            await writer.Write(dictionary, storageFolder, fileName);
+
+            FileStream fs = new FileStream(storageFolder.Path + "\\" + fileName, FileMode.Open, FileAccess.Read);
+           
+            DriveItem driveItem = new DriveItem();
+            driveItem.Name = fileName;
+            driveItem.File = new Microsoft.Graph.File();
+
+            var drive = await GraphClient.Sites[config.Site].Drive.Request().GetAsync();
+            try
+            {
+                var file = await GraphClient.Sites[config.Site].Drive.Root.Children[driveItem.Name].Request().GetAsync();
+                var resOld = await GraphClient.Sites[config.Site].Drive.Items[file.Id].Content.Request().PutAsync<DriveItem>(fs);
+            }
+            catch(Exception ex)
+            {
+                driveItem = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(driveItem);
+                var resNew = await GraphClient.Sites[config.Site].Drive.Items[driveItem.Id].Content.Request().PutAsync<DriveItem>(fs);
+            }
+
+            //TimeStamp to versioning an historic trace
+            if (!TimeStamp.Trim().Equals(""))
+            {
+                string fileNameT = TimeStamp + " " + name + ".csv";
+                await writer.Write(dictionary, storageFolder, fileNameT);
+                FileStream fsT = new FileStream(storageFolder.Path + "\\" + fileNameT, FileMode.Open, FileAccess.Read);
+                DriveItem driveItemStamp = new DriveItem();
+                driveItemStamp.Name = fileNameT;
+                driveItemStamp.File = new Microsoft.Graph.File();
+                try
+                {
+                    var fileT = await GraphClient.Sites[config.Site].Drive.Root.Children[driveItemStamp.Name].Request().GetAsync();
+                    var resOldT = await GraphClient.Sites[config.Site].Drive.Items[fileT.Id].Content.Request().PutAsync<DriveItem>(fsT);
+                }
+                catch (Exception ex1)
+                {
+                    driveItemStamp = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(driveItemStamp);
+                    var resNewT = await GraphClient.Sites[config.Site].Drive.Items[driveItemStamp.Id].Content.Request().PutAsync<DriveItem>(fsT);
+                }
+            }
+
+
+        }
+
         #region Plans
 
         /// <summary>
@@ -269,11 +322,7 @@ namespace MetaPlanner
                 // Sign-in user using MSAL and obtain an access token for MS Graph
                 GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
-               // await GetPlannerPlans();
-
-               writer.Write(PlannerPlans, storageFolder, prefix + " plans.csv");
-
-
+               await GetPlannerPlans();
 
                 if (config.IsSharePointListEbnabled.Equals("true"))
                 {
@@ -297,26 +346,7 @@ namespace MetaPlanner
                 }
                 else
                 {
-
-                    var drive = await GraphClient.Sites[config.Site].Drive.Request().GetAsync();
-
-                    var file = await GraphClient.Sites[config.Site].Drive.Root.Children["plans.csv"].Request().GetAsync();
-
-
-                    FileStream fsNew = new FileStream(storageFolder.Path + "\\plans.csv", FileMode.Open, FileAccess.Read);
-                    DriveItem driveItemNew = new DriveItem();
-                    driveItemNew.Name = "plans.csv";
-                    driveItemNew.File = new Microsoft.Graph.File();
-                    var resNew = await GraphClient.Sites[config.Site].Drive.Items[file.Id].Content.Request().PutAsync<DriveItem>(fsNew);
-
-                    FileStream fs = new FileStream(storageFolder.Path + "\\plans.csv", FileMode.Open, FileAccess.Read);
-                    DriveItem driveItem = new DriveItem();
-                    driveItem.Name = prefix+" plans.csv";
-                    driveItem.File = new Microsoft.Graph.File();
-                    driveItem = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(driveItem);
-                    var res = await GraphClient.Sites[config.Site].Drive.Items[driveItem.Id].Content.Request().PutAsync<DriveItem>(fs);
-
-
+                    await WriteAndUpload(PlannerPlans,  "plans");
                 }
 
                 RadDataGrid.DataContext = PlannerPlans.Values;
@@ -471,27 +501,31 @@ namespace MetaPlanner
 
                 await GetPlannerBuckets();
 
-                writer.Write(PlannerPlans, storageFolder, prefix + " buckets.csv");
 
-                #region Get bulk data from SharePoint
-                var listBuckets = await GetSharePointList("buckets");
-
-                Dictionary<string, MetaPlannerBucket> sharePointBuckets = new Dictionary<string, MetaPlannerBucket>();
-                Dictionary<string, string> itemIds = new Dictionary<string, string>();
-                Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
-
-                foreach (ListItem item in listBuckets)
+                if (config.IsSharePointListEbnabled.Equals("true"))
                 {
-                    MetaPlannerBucket bucket = new MetaPlannerBucket(item.Fields.AdditionalData);
-                    sharePointBuckets.Add(bucket.BucketId, bucket);
-                    itemIds.Add(bucket.BucketId, item.Id);
-                    items.Add(item.Id, item);
+                    #region Get bulk data from SharePoint
+                    var listBuckets = await GetSharePointList("buckets");
+
+                    Dictionary<string, MetaPlannerBucket> sharePointBuckets = new Dictionary<string, MetaPlannerBucket>();
+                    Dictionary<string, string> itemIds = new Dictionary<string, string>();
+                    Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
+
+                    foreach (ListItem item in listBuckets)
+                    {
+                        MetaPlannerBucket bucket = new MetaPlannerBucket(item.Fields.AdditionalData);
+                        sharePointBuckets.Add(bucket.BucketId, bucket);
+                        itemIds.Add(bucket.BucketId, item.Id);
+                        items.Add(item.Id, item);
+                    }
+                    #endregion
+
+                    await ConciliationBuckets(sharePointBuckets, itemIds, items);
                 }
-                #endregion
-
-
-                await ConciliationBuckets(sharePointBuckets, itemIds, items);
-
+                else
+                {
+                    await WriteAndUpload(PlannerBuckets, "buckets");
+                }
                 RadDataGrid.DataContext = PlannerBuckets.Values;
 
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
@@ -721,29 +755,31 @@ namespace MetaPlanner
 
                 await GetPlannerTasks();
 
-                writer.Write(PlannerTasks, storageFolder, prefix + " tasks.csv");
-
-                writer.Write(PlannerAssignments, storageFolder, prefix + " assignees.csv");
-
-
-                #region Get bulk data from SharePoint
-                var listTasks = await GetSharePointList("tasks");
-
-                Dictionary<string, MetaPlannerTask> sharePointTasks = new Dictionary<string, MetaPlannerTask>();
-                Dictionary<string, string> itemIds = new Dictionary<string, string>();
-                Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
-
-                foreach (ListItem item in listTasks)
+                if (config.IsSharePointListEbnabled.Equals("true"))
                 {
-                    MetaPlannerTask task = new MetaPlannerTask(item.Fields.AdditionalData);
-                    sharePointTasks.Add(task.TaskId, task);
-                    itemIds.Add(task.TaskId, item.Id);
-                    items.Add(item.Id, item);
+
+                    #region Get bulk data from SharePoint
+                    var listTasks = await GetSharePointList("tasks");
+
+                    Dictionary<string, MetaPlannerTask> sharePointTasks = new Dictionary<string, MetaPlannerTask>();
+                    Dictionary<string, string> itemIds = new Dictionary<string, string>();
+                    Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
+
+                    foreach (ListItem item in listTasks)
+                    {
+                        MetaPlannerTask task = new MetaPlannerTask(item.Fields.AdditionalData);
+                        sharePointTasks.Add(task.TaskId, task);
+                        itemIds.Add(task.TaskId, item.Id);
+                        items.Add(item.Id, item);
+                    }
+                    #endregion
+                    await ConciliationTasks(sharePointTasks, itemIds, items);
                 }
-                #endregion
-
-
-                await ConciliationTasks(sharePointTasks, itemIds, items);
+                else
+                {
+                    await WriteAndUpload(PlannerTasks, "tasks");
+                    await WriteAndUpload(PlannerAssignments, "assignees");
+                }
 
                 RadDataGrid.DataContext = PlannerTasks.Values;
 
