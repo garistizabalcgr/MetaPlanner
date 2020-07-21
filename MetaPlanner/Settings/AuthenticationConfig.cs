@@ -94,7 +94,7 @@ namespace MetaPlanner
 
         public string Drive { get; set; }
 
-        public string IsSharePointListEbnabled { get; set; }
+        public string IsSharePointListEnabled { get; set; }
 
         /// <summary>
         /// Reads the configuration from a json file

@@ -226,7 +226,7 @@ namespace MetaPlanner
         private async Task WriteAndUpload(System.Collections.IDictionary dictionary, string name)
         {
             string fileName = name + ".csv";
-            await writer.Write(dictionary, storageFolder, fileName);
+            await writer.Write(dictionary.Values, storageFolder, fileName);
 
             FileStream fs = new FileStream(storageFolder.Path + "\\" + fileName, FileMode.Open, FileAccess.Read);
            
@@ -244,13 +244,14 @@ namespace MetaPlanner
             {
                 driveItem = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(driveItem);
                 var resNew = await GraphClient.Sites[config.Site].Drive.Items[driveItem.Id].Content.Request().PutAsync<DriveItem>(fs);
+                lblMessage.Text = ex.Message;
             }
 
             //TimeStamp to versioning an historic trace
             if (!TimeStamp.Trim().Equals(""))
             {
                 string fileNameT = TimeStamp + " " + name + ".csv";
-                await writer.Write(dictionary, storageFolder, fileNameT);
+                await writer.Write(dictionary.Values, storageFolder, fileNameT);
                 FileStream fsT = new FileStream(storageFolder.Path + "\\" + fileNameT, FileMode.Open, FileAccess.Read);
                 DriveItem driveItemStamp = new DriveItem();
                 driveItemStamp.Name = fileNameT;
@@ -264,10 +265,9 @@ namespace MetaPlanner
                 {
                     driveItemStamp = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(driveItemStamp);
                     var resNewT = await GraphClient.Sites[config.Site].Drive.Items[driveItemStamp.Id].Content.Request().PutAsync<DriveItem>(fsT);
+                    lblMessage.Text = ex1.Message;
                 }
             }
-
-
         }
 
         #region Plans
@@ -324,7 +324,9 @@ namespace MetaPlanner
 
                await GetPlannerPlans();
 
-                if (config.IsSharePointListEbnabled.Equals("true"))
+                await WriteAndUpload(PlannerPlans, "plans");
+
+                if (config.IsSharePointListEnabled.Equals("true"))
                 {
                     #region Get bulk data from SharePoint
                     var listPlans = await GetSharePointList("plans");
@@ -344,10 +346,6 @@ namespace MetaPlanner
                     #endregion
                     await ConciliationPlans(sharePointPlans, itemIds, items);
                 }
-                else
-                {
-                    await WriteAndUpload(PlannerPlans,  "plans");
-                }
 
                 RadDataGrid.DataContext = PlannerPlans.Values;
 
@@ -364,6 +362,9 @@ namespace MetaPlanner
 
         private async Task ConciliationPlans(Dictionary<string, MetaPlannerPlan> sharePointPlans, Dictionary<string, string> itemIds, Dictionary<string, ListItem> items)
         {
+            int add = 0;
+            int del = 0;
+            int upd = 0;
 
             #region Add from planner not in sharepoint
             //Add new from Planner to SharePoint
@@ -389,6 +390,8 @@ namespace MetaPlanner
                         }
                     };
                     await GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
+                    add++;
+                    lblMessage.Text = "Plan A: " + add + " D: " + del + " U:" + upd;
                 }               
             }
             #endregion
@@ -400,6 +403,8 @@ namespace MetaPlanner
                 if ( ! PlannerPlans.ContainsKey(entry.Key))
                 {
                     await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    del++;
+                    lblMessage.Text = "Plan A: " + add + " D: " + del + " U:" + upd;
                 }
             }
             #endregion
@@ -436,10 +441,13 @@ namespace MetaPlanner
                         FieldValueSet fieldsChange = new FieldValueSet();
                         fieldsChange.AdditionalData = additionalData;
                         await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        upd++;
+                        lblMessage.Text = "Plan A: " + add + " D: " + del + " U:" + upd;
                     }
                 }
             }
             #endregion
+            App.logger.Information("Plan Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
         #endregion
 
@@ -500,9 +508,9 @@ namespace MetaPlanner
                 GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
                 await GetPlannerBuckets();
+                await WriteAndUpload(PlannerBuckets, "buckets");
 
-
-                if (config.IsSharePointListEbnabled.Equals("true"))
+                if (config.IsSharePointListEnabled.Equals("true"))
                 {
                     #region Get bulk data from SharePoint
                     var listBuckets = await GetSharePointList("buckets");
@@ -522,10 +530,7 @@ namespace MetaPlanner
 
                     await ConciliationBuckets(sharePointBuckets, itemIds, items);
                 }
-                else
-                {
-                    await WriteAndUpload(PlannerBuckets, "buckets");
-                }
+
                 RadDataGrid.DataContext = PlannerBuckets.Values;
 
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
@@ -541,6 +546,9 @@ namespace MetaPlanner
 
         private async Task ConciliationBuckets(Dictionary<string, MetaPlannerBucket> sharePointBuckets, Dictionary<string, string> itemIds, Dictionary<string, ListItem> items)
         {
+            int add = 0;
+            int del = 0;
+            int upd = 0;
 
             #region Add from planner not in sharepoint
             //Add new from Planner to SharePoint
@@ -562,6 +570,8 @@ namespace MetaPlanner
                         }
                     };
                     await GraphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+                    add++;
+                    lblMessage.Text = "Bucket A: " + add + " D: " + del + " U:" + upd;
                 }
             }
             #endregion
@@ -573,6 +583,8 @@ namespace MetaPlanner
                 if (! PlannerBuckets.ContainsKey(entry.Key))
                 {
                     await GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    del++;
+                    lblMessage.Text = "Bucket A: " + add + " D: " + del + " U:" + upd;
                 }
             }
             #endregion
@@ -600,10 +612,14 @@ namespace MetaPlanner
                         FieldValueSet fieldsChange = new FieldValueSet();
                         fieldsChange.AdditionalData = additionalData;
                         await GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        upd++;
+                        lblMessage.Text = "Bucket A: " + add + " D: " + del + " U:" + upd;
                     }
                 }
             }
             #endregion
+
+            App.logger.Information("Buckets Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
 
         #endregion
@@ -623,7 +639,7 @@ namespace MetaPlanner
 
             PlannerTasks = new Dictionary<string, MetaPlannerTask>();
             PlannerAssignments = new Dictionary<string, MetaPlannerAssignment>();
-            PlannerUsers = new Dictionary<string, MetaPlannerUser>();
+            PlannerUsers = new Dictionary<string, MetaPlannerUser>(); //TODO
 
             foreach (MetaPlannerPlan plan in PlannerPlans.Values)
             {
@@ -719,25 +735,6 @@ namespace MetaPlanner
                     TaskId = task.Id,
                     UserId = userId
                 });
-
-                // var filter = $""; // What goes here?
-                // var users = await GraphClient.Users.Request().Filter(filter).GetAsync();
-
-               // var securityEnabledOnly = true;
-
-               // var yy = await GraphClient.Me.GetMemberObjects(securityEnabledOnly).Request().PostAsync();
-                //var xx = await GraphClient.Me.GetMemberGroups(securityEnabledOnly).Request().PostAsync();
-
-                // var user = await GraphClient.Users.Request().GetAsync();
-                /* PlannerUsers.Add(userId, new MetaPlannerUser()
-                 {
-                     UserId = user.Id,
-                     UserPrincipalName = user.UserPrincipalName,
-                     Mail = user.Mail,
-                     DisplayName = user.DisplayName,
-                     Department = user.Department,
-                     JobTitle = user.JobTitle
-                 });*/
             }
         }
 
@@ -755,10 +752,13 @@ namespace MetaPlanner
 
                 await GetPlannerTasks();
 
-                if (config.IsSharePointListEbnabled.Equals("true"))
+                await WriteAndUpload(PlannerTasks, "tasks");
+                await WriteAndUpload(PlannerAssignments, "assignees");
+
+                if (config.IsSharePointListEnabled.Equals("true"))
                 {
 
-                    #region Get bulk data from SharePoint
+                    #region Get bulk data from SharePoint Tasks
                     var listTasks = await GetSharePointList("tasks");
 
                     Dictionary<string, MetaPlannerTask> sharePointTasks = new Dictionary<string, MetaPlannerTask>();
@@ -774,12 +774,25 @@ namespace MetaPlanner
                     }
                     #endregion
                     await ConciliationTasks(sharePointTasks, itemIds, items);
+
+                    #region Get bulk data from SharePoint
+                    var listAssignees = await GetSharePointList("assignees");
+
+                    Dictionary<string, MetaPlannerAssignment> sharePointAsignees = new Dictionary<string, MetaPlannerAssignment>();
+                    Dictionary<string, string> itemIdsA = new Dictionary<string, string>();
+                    Dictionary<string, ListItem> itemsA = new Dictionary<string, ListItem>();
+
+                    foreach (ListItem theItem in listAssignees)
+                    {
+                        MetaPlannerAssignment assignment = new MetaPlannerAssignment(theItem.Fields.AdditionalData);
+                        sharePointAsignees.Add(assignment.TaskId+"_"+ assignment.UserId, assignment);
+                        itemIdsA.Add(assignment.TaskId + "_" + assignment.UserId, theItem.Id);
+                        itemsA.Add(theItem.Id, theItem);
+                    }
+                    #endregion
+                    await ConciliationAssignments(sharePointAsignees, itemIdsA, itemsA);
                 }
-                else
-                {
-                    await WriteAndUpload(PlannerTasks, "tasks");
-                    await WriteAndUpload(PlannerAssignments, "assignees");
-                }
+
 
                 RadDataGrid.DataContext = PlannerTasks.Values;
 
@@ -848,6 +861,7 @@ namespace MetaPlanner
                     {
                         var a = await GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
                         add++;
+                        lblMessage.Text = "Task A: " + add + " D: " + del + " U:" + upd;
                     }
                     catch (Exception exAdd)
                     {
@@ -868,6 +882,7 @@ namespace MetaPlanner
                     {
                         await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                         del++;
+                        lblMessage.Text = "Task A: " + add + " D: " + del + " U:" + upd;
                     }
                     catch (Exception exDel)
                     {
@@ -1042,6 +1057,7 @@ namespace MetaPlanner
                         {
                             var u = await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
                             upd++;
+                            lblMessage.Text = "Task A: " + add + " D: " + del + " U:" + upd;
                         }
                         catch (Exception exUpd)
                         {
@@ -1053,12 +1069,72 @@ namespace MetaPlanner
             }
             #endregion
 
-            lblMessage.Text = "A: " + add + " D: " + del + " U:" + upd;
+            App.logger.Information("Task Aded: " + add + " Deleted: " + del + " Updated:" + upd);
         }
 
+
+        private async Task ConciliationAssignments(Dictionary<string, MetaPlannerAssignment> sharePointAssignees, Dictionary<string, string> itemIds, Dictionary<string, ListItem> items)
+        {
+            int add = 0;
+            int del = 0;
+
+            #region Add from planner not in sharepoint
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, MetaPlannerAssignment> entry in PlannerAssignments)
+            {
+                if (!sharePointAssignees.ContainsKey(entry.Key))
+                {
+                    var assigneeItem = new ListItem
+                    {
+                        Fields = new FieldValueSet
+                        {
+                            AdditionalData = new Dictionary<string, object>()
+                            {
+                                {"Title", entry.Value.TaskId},
+                                {"UserId", entry.Value.UserId},
+                            }
+                        }
+                    };
+                    try
+                    {
+                        var a = await GraphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneeItem);
+                        add++;
+                        lblMessage.Text = "Assignees Added: " + add + " Deleted: " + del;
+                    }
+                    catch (Exception exAdd)
+                    {
+                        await DisplayMessageAsync($"Error Adding:{System.Environment.NewLine}{exAdd}");
+                        App.logger.Error(exAdd.Message);
+                    }
+                }
+            }
+            #endregion
+
+            #region Delete in SharePoint not in planner
+            //Delete from SharePoint not in Planner
+            foreach (KeyValuePair<string, MetaPlannerAssignment> entry in sharePointAssignees)
+            {
+                if (!PlannerAssignments.ContainsKey(entry.Key))
+                {
+                    try
+                    {
+                        await GraphClient.Sites[config.Site].Lists["assignees"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        del++;
+                        lblMessage.Text = "Assignees Added: " + add + " Deleted: " + del;
+                    }
+                    catch (Exception exDel)
+                    {
+                        await DisplayMessageAsync($"Error Deleting:{System.Environment.NewLine}{exDel}");
+                        App.logger.Error(exDel.Message);
+                    }
+                }
+            }
+            #endregion
+
+            lblMessage.Text = "Assignees Added: " + add + " Deleted: " + del ;
+            App.logger.Information("Assignees Added: " + add + " Deleted: " + del);
+        }
         #endregion
-
-
 
 
         /// <summary>
@@ -1066,7 +1142,7 @@ namespace MetaPlanner
         /// </summary>
         private async void CallGroupButton_Click(object sender, RoutedEventArgs e)
         {
-            
+            //TODO delete
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
             RadDataGrid.StartBringIntoView();
 
@@ -1357,16 +1433,16 @@ namespace MetaPlanner
 
                 Writer writer = new Writer();
                 //writer.Write(listPlan, storageFolder, "plans.csv");
-                writer.Write(listPlan, storageFolder, prefix+" plans.csv");
+                await writer.Write(listPlan, storageFolder, prefix+" plans.csv");
 
                 //writer.Write(listBuckets, storageFolder, "buckets.csv");
-                writer.Write(listBuckets, storageFolder, prefix + " buckets.csv");
+                await writer.Write(listBuckets, storageFolder, prefix + " buckets.csv");
 
                 //writer.Write(listTasks, storageFolder, "tasks.csv");
-                writer.Write(listTasks, storageFolder, prefix + " tasks.csv");
+               await writer.Write(listTasks, storageFolder, prefix + " tasks.csv");
 
                 //writer.Write(listAssignment, storageFolder, "assignees.csv");
-                writer.Write(listAssignment, storageFolder, prefix + " assignees.csv");
+               await writer.Write(listAssignment, storageFolder, prefix + " assignees.csv");
 
                 //File.Copy(sourceFile, destinationFile, true);
                  

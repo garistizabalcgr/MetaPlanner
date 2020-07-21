@@ -127,7 +127,7 @@ namespace MetaPlanner.Model
                 if (assigneePriority != null)
                     return assigneePriority.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { assigneePriority = value; }
         }
@@ -177,7 +177,7 @@ namespace MetaPlanner.Model
                 if (startDateTime != null)
                     return startDateTime.ToString();
                 else
-                    return null;
+                    return "";
             }
         set { startDateTime = value; }
     }
@@ -216,7 +216,7 @@ namespace MetaPlanner.Model
                 if (dueDateTime != null)
                     return dueDateTime.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { dueDateTime = value; }
         }
@@ -242,7 +242,7 @@ namespace MetaPlanner.Model
                 if (completedDateTime != null)
                     return completedDateTime.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { completedDateTime = value; }
         }
@@ -281,7 +281,7 @@ namespace MetaPlanner.Model
                 if (category1 != null)
                     return category1.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { category1 = value; }
         }
@@ -294,7 +294,7 @@ namespace MetaPlanner.Model
                 if (category2 != null)
                     return category2.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { category2 = value; }
         }
@@ -307,7 +307,7 @@ namespace MetaPlanner.Model
                 if (category3 != null)
                     return category3.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { category3 = value; }
         }
@@ -319,7 +319,7 @@ namespace MetaPlanner.Model
                 if (category4 != null)
                     return category4.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { category4 = value; }
         }
@@ -331,7 +331,7 @@ namespace MetaPlanner.Model
                 if (category5 != null)
                     return category5.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { category5 = value; }
         }
@@ -343,7 +343,7 @@ namespace MetaPlanner.Model
                 if (category6 != null)
                     return category6.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { category6 = value; }
         }
