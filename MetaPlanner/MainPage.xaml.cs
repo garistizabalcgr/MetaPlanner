@@ -714,11 +714,14 @@ namespace MetaPlanner
                     myTask.StartDateTime = task.StartDateTime.ToString();
                     myTask.Url = "https://tasks.office.com/"+config.Tenant+"/es-es/Home/Task/" + task.Id;
                     #endregion
-                    
+                    object priority;
+                    task.AdditionalData.TryGetValue("priority", out priority);
+                    if (priority != null)
+                        myTask.Priority = priority.ToString();
                     PlannerTasks.Add(myTask.TaskId, myTask);
                     GetPlannerAssignment(task);
                 }
-           
+                App.logger.Information("Start ProcessTasks" + PlannerTasks.Count);
             }
         }
 
@@ -853,7 +856,8 @@ namespace MetaPlanner
                                 {"PercentComplete", entry.Value.PercentComplete },
                                 {"ReferenceCount", entry.Value.ReferenceCount },
                                 {"StartDateTime", entry.Value.StartDateTime },
-                                {"Url", entry.Value.Url }
+                                {"Url", entry.Value.Url},
+                                {"Priority",entry.Value.Priority }
                             }
                         }
                     };
@@ -1047,6 +1051,10 @@ namespace MetaPlanner
                     {
                         additionalData.Add("Url", origin.Url);
                     }
+                    if (!String.Equals(origin.Priority, destination.Priority))
+                    {
+                        additionalData.Add("Priority", origin.Priority);
+                    }
 
                     if (additionalData.Keys.Count > 0)
                     {
@@ -1069,7 +1077,7 @@ namespace MetaPlanner
             }
             #endregion
 
-            App.logger.Information("Task Aded: " + add + " Deleted: " + del + " Updated:" + upd);
+            App.logger.Information("Task Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
 
 

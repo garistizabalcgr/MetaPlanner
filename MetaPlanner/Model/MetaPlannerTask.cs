@@ -44,6 +44,7 @@ namespace MetaPlanner.Model
             fields.TryGetValue("CompletedBy", out completedBy);
             fields.TryGetValue("AssignmentsCount", out assignmentsCount);
             fields.TryGetValue("Url", out url);
+            fields.TryGetValue("Priority", out priority);
         }
 
 
@@ -406,6 +407,19 @@ namespace MetaPlanner.Model
                     return null;
             }
             set { url = value; }
+        }
+
+        private object priority;
+        public string Priority
+        {
+            get
+            {
+                if (priority != null)
+                    return priority.ToString();
+                else
+                    return null;
+            }
+            set { priority = value; }
         }
     }
 }
