@@ -31,68 +31,104 @@ namespace MetaPlanner.Model
         private object planId;
         public string PlanId
         {
-            get { return planId.ToString(); }  
-            set { planId = value; }  
+            get
+            {
+                if (planId != null)
+                    return planId.ToString();
+                else
+                    return null;
+            }
+            set { planId = value; }
         }
 
         private object planName;
         public string PlanName
         {
-            get { return planName.ToString(); }
+            get
+            {
+                if (planName != null)
+                    return planName.ToString();
+                else
+                    return null;
+            }
             set { planName = value; }
         }
 
         private object createdBy;
         public string CreatedBy
         {
-            get { return createdBy.ToString(); }
+            get
+            {
+                if (createdBy != null)
+                    return createdBy.ToString();
+                else
+                    return null;
+            }
             set { createdBy = value; }
         }
 
         private object createdDate;
-        public DateTimeOffset? CreatedDate
+        public string CreatedDate
         {
-            get{
-                if (createdDate.GetType() == typeof(string) && createdDate != null)
-                    return DateTimeOffset.Parse(createdDate.ToString());
-                else if (createdDate != null)
-                    return (DateTimeOffset)createdDate;
+            get
+            {
+                if (createdDate != null)
+                    return createdDate.ToString();
                 else
-                    return DateTimeOffset.MinValue; 
+                    return null;
             }
-            set {
-                if (value.GetType() == typeof(string) )
-                    createdDate = DateTimeOffset.Parse(value.ToString());
-                else
-                    createdDate = value; 
-            }
+            set { createdDate = value; }
         }
 
         private object groupName;
         public string GroupName
         {
-            get { return groupName.ToString(); }
+            get
+            {
+                if (groupName != null)
+                    return groupName.ToString();
+                else
+                    return null;
+            }
             set { groupName = value; }
         }
 
         private object groupDescription;
         public string GroupDescription
         {
-            get { return groupDescription.ToString(); }
+            get
+            {
+                if (groupDescription != null)
+                    return groupDescription.ToString();
+                else
+                    return null;
+            }
             set { groupDescription = value; }
         }
 
         private object groupMail;
         public string GroupMail
         {
-            get { return groupMail.ToString(); }
+            get
+            {
+                if (groupMail != null)
+                    return groupMail.ToString();
+                else
+                    return null;
+            }
             set { groupMail = value; }
         }
 
         private object url;
         public string Url
         {
-            get { return url.ToString(); }
+            get
+            {
+                if (url != null)
+                    return url.ToString();
+                else
+                    return null;
+            }
             set { url = value; }
         }
 
@@ -104,25 +140,22 @@ namespace MetaPlanner.Model
                 if (parentId != null)
                     return parentId.ToString();
                 else
-
-                    return null; 
+                    return null;
             }
             set { parentId = value; }
         }
 
         private object visible;
-        public bool Visible
+        public string Visible
         {
             get
             {
-                if (parentId != null)
-                    return Convert.ToBoolean(visible);
+                if (visible != null)
+                    return visible.ToString();
                 else
-
-                    return false;
+                    return null;
             }
-            set { parentId = value; }
+            set { visible = value; }
         }
-
     }
 }

@@ -301,7 +301,7 @@ namespace MetaPlanner
                         PlanId = p.Id,
                         PlanName = p.Title,
                         CreatedBy = p.CreatedBy.User.Id,
-                        CreatedDate = p.CreatedDateTime,
+                        CreatedDate = p.CreatedDateTime.ToString(),
                         GroupName = group.DisplayName,
                         GroupDescription = group.Description,
                         GroupMail = group.Mail,
@@ -423,7 +423,7 @@ namespace MetaPlanner
                     {
                         additionalData.Add("PlanName", origin.PlanName);
                     }
-                    if (! String.Equals(origin.GroupDescription, destination.GroupDescription))
+                    if (!String.Equals(origin.GroupDescription, destination.GroupDescription))
                     {
                         additionalData.Add("GroupDescription", origin.GroupDescription);
                     }
