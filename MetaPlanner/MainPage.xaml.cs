@@ -301,7 +301,7 @@ namespace MetaPlanner
                         PlanId = p.Id,
                         PlanName = p.Title,
                         CreatedBy = p.CreatedBy.User.Id,
-                        CreatedDate = p.CreatedDateTime.ToString(),
+                        CreatedDate = p.CreatedDateTime,
                         GroupName = group.DisplayName,
                         GroupDescription = group.Description,
                         GroupMail = group.Mail,
@@ -435,12 +435,12 @@ namespace MetaPlanner
                     {
                         additionalData.Add("GroupName", origin.GroupName);
                     }
-
+                    //CreteDagte is readOnly
                     if (additionalData.Keys.Count > 0)
                     {
                         FieldValueSet fieldsChange = new FieldValueSet();
                         fieldsChange.AdditionalData = additionalData;
-                        await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        object obj = await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
                         upd++;
                         lblMessage.Text = "Plan A: " + add + " D: " + del + " U:" + upd;
                     }
@@ -702,16 +702,16 @@ namespace MetaPlanner
                     myTask.ChecklistItemCount = task.ChecklistItemCount.ToString();
                     if (task.CompletedBy != null)
                         myTask.CompletedBy = task.CompletedBy.User.Id;
-                    myTask.CompletedDateTime = task.CompletedDateTime.ToString();
+                    myTask.CompletedDateTime = task.CompletedDateTime;
                     myTask.ConversationThreadId = task.ConversationThreadId;
                     myTask.CreatedBy = task.CreatedBy.User.Id;
-                    myTask.CreatedDateTime = task.CreatedDateTime.ToString();
-                    myTask.DueDateTime = task.DueDateTime.ToString();
+                    myTask.CreatedDateTime = task.CreatedDateTime;
+                    myTask.DueDateTime = task.DueDateTime;
                     myTask.HasDescription = task.HasDescription.ToString();
                     myTask.OrderHint = task.OrderHint;
                     myTask.PercentComplete = task.PercentComplete.ToString();
                     myTask.ReferenceCount = task.ReferenceCount.ToString();
-                    myTask.StartDateTime = task.StartDateTime.ToString();
+                    myTask.StartDateTime = task.StartDateTime;
                     myTask.Url = "https://tasks.office.com/"+config.Tenant+"/es-es/Home/Task/" + task.Id;
                     #endregion
                     object priority;
@@ -992,10 +992,6 @@ namespace MetaPlanner
                         additionalData.Add("CompletedBy", origin.CompletedBy);
                     }
 
-                    if (!String.Equals(origin.CompletedDateTime, destination.CompletedDateTime))
-                    {
-                        additionalData.Add("CompletedDateTime", origin.CompletedDateTime);
-                    }
 
                     if (!String.Equals(origin.ConversationThreadId, destination.ConversationThreadId))
                     {
@@ -1007,12 +1003,22 @@ namespace MetaPlanner
                         additionalData.Add("CreatedBy", origin.CreatedBy);
                     }
 
-                    if (!String.Equals(origin.CreatedDateTime, destination.CreatedDateTime))
+                    if (DateTimeOffset.Compare((DateTimeOffset)origin.CreatedDateTime, (DateTimeOffset)destination.CreatedDateTime) != 0)
                     {
                         additionalData.Add("CreatedDateTime", origin.CreatedDateTime);
                     }
 
-                    if (!String.Equals(origin.DueDateTime, destination.DueDateTime))
+                    if (DateTimeOffset.Compare((DateTimeOffset)origin.StartDateTime, (DateTimeOffset)destination.StartDateTime) != 0)
+                    {
+                        additionalData.Add("StartDateTime", origin.StartDateTime);
+                    }
+
+                    if (DateTimeOffset.Compare((DateTimeOffset)origin.CompletedDateTime, (DateTimeOffset)destination.CompletedDateTime) != 0)
+                    {
+                        additionalData.Add("CompletedDateTime", origin.CompletedDateTime);
+                    }
+
+                    if (DateTimeOffset.Compare((DateTimeOffset)origin.DueDateTime, (DateTimeOffset)destination.DueDateTime) != 0)
                     {
                         additionalData.Add("DueDateTime", origin.DueDateTime);
                     }
@@ -1042,15 +1048,12 @@ namespace MetaPlanner
                         additionalData.Add("ReferenceCount", origin.ReferenceCount);
                     }
 
-                    if (!String.Equals(origin.StartDateTime, destination.StartDateTime))
-                    {
-                        additionalData.Add("StartDateTime", origin.StartDateTime);
-                    }
-                    #endregion
                     if (!String.Equals(origin.Url, destination.Url))
                     {
                         additionalData.Add("Url", origin.Url);
                     }
+                    #endregion
+
                     if (!String.Equals(origin.Priority, destination.Priority))
                     {
                         additionalData.Add("Priority", origin.Priority);
@@ -1334,17 +1337,17 @@ namespace MetaPlanner
                         myTask.ChecklistItemCount = t.ChecklistItemCount.ToString();
                         if (t.CompletedBy != null)
                             myTask.CompletedBy = t.CompletedBy.User.Id;
-                        myTask.CompletedDateTime = t.CompletedDateTime.ToString();
+                        myTask.CompletedDateTime = t.CompletedDateTime;
                         myTask.ConversationThreadId = t.ConversationThreadId;
                         myTask.CreatedBy = t.CreatedBy.User.Id;
-                        myTask.CreatedDateTime = t.CreatedDateTime.ToString();
-                        myTask.DueDateTime = t.DueDateTime.ToString();
+                        myTask.CreatedDateTime = t.CreatedDateTime;
+                        myTask.DueDateTime = t.DueDateTime;
                         myTask.HasDescription = t.HasDescription.ToString();
                         myTask.OrderHint = t.OrderHint;
                         myTask.PercentComplete = t.PercentComplete.ToString();
                         myTask.PlanId = t.PlanId;
                         myTask.ReferenceCount = t.ReferenceCount.ToString();
-                        myTask.StartDateTime = t.StartDateTime.ToString();
+                        myTask.StartDateTime = t.StartDateTime;
                         myTask.Url = "https://tasks.office.com/congenrep.onmicrosoft.com/es-es/Home/Task/" + t.Id;
                         #endregion
 

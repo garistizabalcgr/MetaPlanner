@@ -68,12 +68,12 @@ namespace MetaPlanner.Model
         }
 
         private object createdDate;
-        public string CreatedDate
+        public DateTimeOffset? CreatedDate
         {
             get
             {
                 if (createdDate != null)
-                    return createdDate.ToString();
+                    return DateTimeOffset.Parse(createdDate.ToString());
                 else
                     return null;
             }

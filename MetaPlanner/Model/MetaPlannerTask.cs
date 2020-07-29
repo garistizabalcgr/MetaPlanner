@@ -170,31 +170,34 @@ namespace MetaPlanner.Model
         set { percentComplete = value; }
     }
 
-    private object startDateTime;
-    public string StartDateTime
-    {
-        get
+        private object startDateTime;
+        public DateTimeOffset? StartDateTime
+        {
+            get
             {
                 if (startDateTime != null)
-                    return startDateTime.ToString();
-                else
-                    return "";
-            }
-        set { startDateTime = value; }
-    }
-
-    private object createdDateTime;
-    public string CreatedDateTime
-    {
-        get
-            {
-                if (createdDateTime != null)
-                    return createdDateTime.ToString();
+                    return DateTimeOffset.Parse(startDateTime.ToString());
                 else
                     return null;
             }
-        set { createdDateTime = value; }
-    }
+            set { startDateTime = value; }
+        }
+
+
+        private object createdDateTime;
+        public DateTimeOffset? CreatedDateTime
+        {
+            get
+            {
+                if (createdDateTime != null)
+                    return DateTimeOffset.Parse(createdDateTime.ToString());
+                else
+                    return null;
+            }
+            set { createdDateTime = value; }
+        }
+
+
 
     private object createdBy;
     public string CreatedBy
@@ -209,19 +212,19 @@ namespace MetaPlanner.Model
         set { createdBy = value; }
     }
 
+
         private object dueDateTime;
-        public string DueDateTime
+        public DateTimeOffset? DueDateTime
         {
             get
             {
                 if (dueDateTime != null)
-                    return dueDateTime.ToString();
+                    return DateTimeOffset.Parse(dueDateTime.ToString());
                 else
-                    return "";
+                    return null;
             }
             set { dueDateTime = value; }
         }
-
         private object hasDescription;
         public string HasDescription
         {
@@ -236,17 +239,18 @@ namespace MetaPlanner.Model
         }
 
         private object completedDateTime;
-        public string CompletedDateTime
+        public DateTimeOffset? CompletedDateTime
         {
             get
             {
                 if (completedDateTime != null)
-                    return completedDateTime.ToString();
+                    return DateTimeOffset.Parse(completedDateTime.ToString());
                 else
-                    return "";
+                    return null;
             }
             set { completedDateTime = value; }
         }
+
 
         private object referenceCount;
         public string ReferenceCount
