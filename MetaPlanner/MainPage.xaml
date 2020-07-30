@@ -38,7 +38,6 @@
                 <Button x:Name="btnLoadBuckets" Content="Depósitos" HorizontalAlignment="Right" Padding="5" Click="ProcessBuckets" Margin="5" FontFamily="Segoe Ui"/>
                 <Button x:Name="btnLoadTasks" Content="Tareas" HorizontalAlignment="Right" Padding="5" Click="ProcessTasks" Margin="5" FontFamily="Segoe Ui"/>
  
-                <Button x:Name="btnLoad" Content="Load" HorizontalAlignment="Right" Padding="5" Click="CallGroupButton_Click" Margin="5" FontFamily="Segoe Ui"/>
                
                 <telerik:RadRadialGauge x:Name="RadialGauge" 
                                    Height="80" MinValue="0" MaxValue="100" 
