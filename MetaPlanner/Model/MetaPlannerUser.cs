@@ -15,12 +15,10 @@ namespace MetaPlanner.Model
 
         public MetaPlannerUser(IDictionary<string, object> fields)
         {
-            fields.TryGetValue("UserId", out userId);
+            fields.TryGetValue("Title", out userId);
             fields.TryGetValue("UserPrincipalName", out userPrincipalName);
             fields.TryGetValue("Mail", out mail);
-            fields.TryGetValue("DisplayName", out displayName);
-            fields.TryGetValue("Department", out department);
-            fields.TryGetValue("JobTitle", out jobTitle);
+            fields.TryGetValue("TheName", out theName);
         }
 
 
@@ -63,44 +61,18 @@ namespace MetaPlanner.Model
             set { mail = value; }
         }
 
-        private object displayName;
-        public string DisplayName
+        private object theName;
+        public string TheName
         {
             get
             {
-                if (displayName != null)
-                    return displayName.ToString();
+                if (theName != null)
+                    return theName.ToString();
                 else
                     return null;
             }
-            set { displayName = value; }
+            set { theName = value; }
         }
 
-
-        private object department;
-        public string Department
-        {
-            get
-            {
-                if (department != null)
-                    return department.ToString();
-                else
-                    return null;
-            }
-            set { department = value; }
-        }
-
-        private object jobTitle;
-        public string JobTitle
-        {
-            get
-            {
-                if (jobTitle != null)
-                    return jobTitle.ToString();
-                else
-                    return null;
-            }
-            set { jobTitle = value; }
-        }
     }
 }

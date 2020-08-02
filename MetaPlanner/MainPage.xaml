@@ -32,13 +32,13 @@
             </telerikGrid:RadDataGrid>
            
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="btnClean" Content="Borrar" HorizontalAlignment="Right" Padding="5" Click="CleanAllSharePointLists" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnClean" Content="Borrar" HorizontalAlignment="Right" Padding="5" Click="btnClean_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadPlans" Content="Planes" HorizontalAlignment="Right" Padding="5" Click="btnLoadPlans_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadBuckets" Content="Depósitos" HorizontalAlignment="Right" Padding="5" Click="btnLoadBuckets_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadTasks" Content="Tareas" HorizontalAlignment="Right" Padding="5" Click="btnLoadTasks_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadUsers" Content="Usuarios" HorizontalAlignment="Right" Padding="5" Click="btnLoadUsers_Click" Margin="5" FontFamily="Segoe Ui"/>
 
-                <Button x:Name="btnLoadPlans" Content="Planes" HorizontalAlignment="Right" Padding="5" Click="ProcessPlans" Margin="5" FontFamily="Segoe Ui"/>
-                <Button x:Name="btnLoadBuckets" Content="Depósitos" HorizontalAlignment="Right" Padding="5" Click="ProcessBuckets" Margin="5" FontFamily="Segoe Ui"/>
-                <Button x:Name="btnLoadTasks" Content="Tareas" HorizontalAlignment="Right" Padding="5" Click="ProcessTasks" Margin="5" FontFamily="Segoe Ui"/>
- 
-               
+
                 <telerik:RadRadialGauge x:Name="RadialGauge" 
                                    Height="80" MinValue="0" MaxValue="100" 
                                    MaxAngle="180" MinAngle="0" LabelRadiusScale="1.10" 
@@ -48,8 +48,6 @@
 
                 </telerik:RadRadialGauge>
 
-                <Button x:Name="btnCall" Content="Call Microsoft Graph API" HorizontalAlignment="Right" Padding="5" Click="CallGraphButton_Click" Margin="5" FontFamily="Segoe Ui"/>
-                <Button x:Name="SignOutButton" Content="Sign-Out" HorizontalAlignment="Right" Padding="5" Click="SignOutButton_Click" Margin="5" FontFamily="Segoe Ui" Visibility="Collapsed"/>
                 <Image Source="/Assets/SmallTile.scale-100.png" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="1" Height="100"/>
 
 
