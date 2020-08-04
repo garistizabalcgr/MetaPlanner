@@ -32,12 +32,12 @@
             </telerikGrid:RadDataGrid>
            
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="btnClean" Content="Borrar" HorizontalAlignment="Right" Padding="5" Click="btnClean_Click" Margin="5" FontFamily="Segoe Ui"/>
-                <Button x:Name="btnLoadAll" Content="Sincronizar" HorizontalAlignment="Right" Padding="5" Click="btnLoadAll_Click" Margin="5" FontFamily="Segoe Ui"/>
-                <Button x:Name="btnLoadPlans" Content="Planes" HorizontalAlignment="Right" Padding="5" Click="btnLoadPlans_Click" Margin="5" FontFamily="Segoe Ui"/>
-                <Button x:Name="btnLoadBuckets" Content="Depósitos" HorizontalAlignment="Right" Padding="5" Click="btnLoadBuckets_Click" Margin="5" FontFamily="Segoe Ui"/>
-                <Button x:Name="btnLoadTasks" Content="Tareas" HorizontalAlignment="Right" Padding="5" Click="btnLoadTasks_Click" Margin="5" FontFamily="Segoe Ui"/>
-                <Button x:Name="btnLoadUsers" Content="Usuarios" HorizontalAlignment="Right" Padding="5" Click="btnLoadUsers_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnClean" Content="Clean All" HorizontalAlignment="Right" Padding="5" Click="btnClean_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadAll" Content="Sync All" HorizontalAlignment="Right" Padding="5" Click="btnLoadAll_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadPlans" Content="Plans" HorizontalAlignment="Right" Padding="5" Click="btnLoadPlans_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadBuckets" Content="Buckets" HorizontalAlignment="Right" Padding="5" Click="btnLoadBuckets_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadTasks" Content="Tasks" HorizontalAlignment="Right" Padding="5" Click="btnLoadTasks_Click" Margin="5" FontFamily="Segoe Ui"/>
+                <Button x:Name="btnLoadUsers" Content="Users" HorizontalAlignment="Right" Padding="5" Click="btnLoadUsers_Click" Margin="5" FontFamily="Segoe Ui"/>
 
 
                 <telerik:RadRadialGauge x:Name="RadialGauge" 
