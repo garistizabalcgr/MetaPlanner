@@ -1079,13 +1079,21 @@ namespace MetaPlanner.Control
         }
         #endregion
 
+        #region All
+        public async Task ProcessAll()
+        {
+            await ProcessPlans();
+            await ProcessBuckets();
+            await ProcessTasks();
+            await ProcessUsers();
+        }
+        #endregion
 
-
-        /// <summary>
-        /// Sign in user using MSAL and obtain a token for Microsoft Graph
-        /// </summary>
-        /// <returns>GraphServiceClient</returns>
-        private async static Task<GraphServiceClient> SignInAndInitializeGraphServiceClient(string[] scopes)
+            /// <summary>
+            /// Sign in user using MSAL and obtain a token for Microsoft Graph
+            /// </summary>
+            /// <returns>GraphServiceClient</returns>
+            private async static Task<GraphServiceClient> SignInAndInitializeGraphServiceClient(string[] scopes)
         {
             GraphServiceClient graphClient = new GraphServiceClient(config.MSGraphURL,
                 new DelegateAuthenticationProvider(async (requestMessage) =>
@@ -1208,37 +1216,63 @@ namespace MetaPlanner.Control
 
             GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
-            await CleanSharepointList("users");
-            await CleanSharepointList("assignees");
+             CleanSharepointList("buckets");
+             CleanSharepointList("plans");
+             CleanSharepointList("users");
+             CleanSharepointList("assignees");
             await CleanSharepointList("tasks");
-            await CleanSharepointList("buckets");
-            await CleanSharepointList("plans");
+
 
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
         }
 
         private async Task WriteAndUpload(System.Collections.IDictionary dictionary, string name)
         {
-            string fileName = name + ".csv";
-            await writer.Write(dictionary.Values, storageFolder, fileName);
 
-            FileStream fs = new FileStream(storageFolder.Path + "\\" + fileName, FileMode.Open, FileAccess.Read);
-
-            DriveItem driveItem = new DriveItem();
-            driveItem.Name = fileName;
-            driveItem.File = new Microsoft.Graph.File();
 
             var drive = await GraphClient.Sites[config.Site].Drive.Request().GetAsync();
+            
+            //Check the Folder in SharePoint
+            DriveItem root = await GraphClient.Sites[config.Site].Drives[drive.Id].Root.Request().GetAsync();
+            IDriveItemChildrenCollectionPage children = await GraphClient.Drives[drive.Id].Items[root.Id].Children.Request().GetAsync();//TODO user root instead items
+            DriveItem theFolder = children.Where(c => c.Name == config.FolderName).FirstOrDefault();
+
+            string folderId;
+            
+            
+            // If does not exist create it
+            if (theFolder == null)
+            {
+                theFolder = new DriveItem { Name = config.FolderName, Folder = new Folder() };
+                var newFolder =  await GraphClient.Drives[drive.Id].Root.Children.Request().AddAsync(theFolder);
+                folderId = newFolder.Id;
+            }
+            else
+            {
+                folderId = theFolder.Id;
+            }
+
+            //Prepare the stream to upload
+            string fileName =  name + ".csv";
+            await writer.Write(dictionary.Values, storageFolder, fileName);
+            FileStream fileStream = new FileStream(storageFolder.Path + "\\" + fileName, FileMode.Open, FileAccess.Read);
+
+            DriveItem theFile = new DriveItem() { Name = fileName, File = new Microsoft.Graph.File() };
+
+
             try
             {
-                var file = await GraphClient.Sites[config.Site].Drive.Root.Children[driveItem.Name].Request().GetAsync();
-                var resOld = await GraphClient.Sites[config.Site].Drive.Items[file.Id].Content.Request().PutAsync<DriveItem>(fs);
+                
+                var file = await GraphClient.Sites[config.Site].Drives[drive.Id].Root.Children[theFile.Name].Request().GetAsync();
+                var resOld = await GraphClient.Sites[config.Site].Drives[drive.Id].Items[file.Id].Content.Request().PutAsync<DriveItem>(fileStream);
+
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                driveItem = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(driveItem);
-                var resNew = await GraphClient.Sites[config.Site].Drive.Items[driveItem.Id].Content.Request().PutAsync<DriveItem>(fs);
-                mainPage.DisplayMessage(ex.Message);
+                //theFile = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(theFile);
+                //var resNew = await GraphClient.Sites[config.Site].Drive.Items[theFile.Id].Content.Request().PutAsync<DriveItem>(fs);
+                App.logger.Error(exception.Message);
+                //mainPage.DisplayMessage(ex.Message);
             }
 
             //TimeStamp to versioning an historic trace

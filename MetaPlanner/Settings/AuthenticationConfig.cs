@@ -94,6 +94,8 @@ namespace MetaPlanner
 
         public string Drive { get; set; }
 
+        public string FolderName { get; set; }
+
         public string IsSharePointListEnabled { get; set; }
 
         /// <summary>

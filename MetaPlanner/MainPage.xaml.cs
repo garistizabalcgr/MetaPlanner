@@ -179,5 +179,27 @@ namespace MetaPlanner
                 return;
             }
         }
+
+        private async void btnLoadAll_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                App.logger.Information("Start ProcessAll");
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
+
+                await Control.ProcessAll();
+                RadDataGrid.DataContext = Control.PlannerPlans.Values;
+
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
+                App.logger.Information("End ProcessAll");
+            }
+            catch (Exception exception)
+            {
+                await DisplayMessageAsync($"ProcessAll:{System.Environment.NewLine}{exception}");
+                App.logger.Error(exception.Message);
+                return;
+            }
+
+        }
     }
 }
