@@ -168,7 +168,7 @@ namespace MetaPlanner.Control
                             }
                         }
                     };
-                    await GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
+                    GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
                     add++;
                     mainPage.DisplayMessage( "Plan A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -181,7 +181,7 @@ namespace MetaPlanner.Control
             {
                 if (!PlannerPlans.ContainsKey(entry.Key))
                 {
-                    await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                     del++;
                     mainPage.DisplayMessage("Plan A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -219,7 +219,7 @@ namespace MetaPlanner.Control
                     {
                         FieldValueSet fieldsChange = new FieldValueSet();
                         fieldsChange.AdditionalData = additionalData;
-                        object obj = await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        object obj =  GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
                         upd++;
                         mainPage.DisplayMessage("Plan A: " + add + " D: " + del + " U:" + upd);
                     }
@@ -334,7 +334,7 @@ namespace MetaPlanner.Control
                             }
                         }
                     };
-                    await GraphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+                    GraphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
                     add++;
                     mainPage.DisplayMessage("Bucket A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -347,7 +347,7 @@ namespace MetaPlanner.Control
             {
                 if (!PlannerBuckets.ContainsKey(entry.Key))
                 {
-                    await GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                     del++;
                     mainPage.DisplayMessage("Bucket A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -376,7 +376,7 @@ namespace MetaPlanner.Control
                     {
                         FieldValueSet fieldsChange = new FieldValueSet();
                         fieldsChange.AdditionalData = additionalData;
-                        await GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
                         upd++;
                         mainPage.DisplayMessage("Bucket A: " + add + " D: " + del + " U:" + upd);
                     }
@@ -574,7 +574,7 @@ namespace MetaPlanner.Control
             int add = 0;
             int del = 0;
             int upd = 0;
-
+            int counter = 0;
             #region Add from planner not in sharepoint
             //Add new from Planner to SharePoint
             foreach (KeyValuePair<string, MetaPlannerTask> entry in PlannerTasks)
@@ -622,7 +622,14 @@ namespace MetaPlanner.Control
                     };
                     try
                     {
-                        var a = await GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
+                        if (add % 100 != 0)
+                        {
+                            var a = GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
+                        }
+                        else
+                        {
+                            var a = await GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
+                        }
                         add++;
                         mainPage.DisplayMessage("Task A: " + add + " D: " + del + " U:" + upd);
                     }
@@ -643,7 +650,14 @@ namespace MetaPlanner.Control
                 {
                     try
                     {
-                        await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        if (del % 100 != 0)
+                        {
+                            GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        }
+                        else
+                        {
+                            await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        }
                         del++;
                         mainPage.DisplayMessage("Task A: " + add + " D: " + del + " U:" + upd);
                     }
@@ -836,7 +850,14 @@ namespace MetaPlanner.Control
 
                                 try
                                 {
-                                    var u = await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                                    if (upd % 100 != 0)
+                                    {
+                                        var u = GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                                    }
+                                    else
+                                    {
+                                        var u = await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                                    }
                                     upd++;
                                     mainPage.DisplayMessage("Task A: " + add + " D: " + del + " U:" + upd);
                                 }
@@ -885,7 +906,7 @@ namespace MetaPlanner.Control
                     };
                     try
                     {
-                        var a = await GraphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneeItem);
+                        var a =  GraphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneeItem);
                         add++;
                         mainPage.DisplayMessage("Assignees Added: " + add + " Deleted: " + del);
                     }
@@ -906,7 +927,7 @@ namespace MetaPlanner.Control
                 {
                     try
                     {
-                        await GraphClient.Sites[config.Site].Lists["assignees"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        GraphClient.Sites[config.Site].Lists["assignees"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                         del++;
                         mainPage.DisplayMessage("Assignees Added: " + add + " Deleted: " + del);
                     }
@@ -1020,7 +1041,7 @@ namespace MetaPlanner.Control
                             }
                         }
                     };
-                    await GraphClient.Sites[config.Site].Lists["users"].Items.Request().AddAsync(userItem);
+                    GraphClient.Sites[config.Site].Lists["users"].Items.Request().AddAsync(userItem);
                     add++;
                     mainPage.DisplayMessage("Users A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -1033,7 +1054,7 @@ namespace MetaPlanner.Control
             {
                 if (!PlannerUsers.ContainsKey(entry.Key))
                 {
-                    await GraphClient.Sites[config.Site].Lists["users"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    GraphClient.Sites[config.Site].Lists["users"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                     del++;
                     mainPage.DisplayMessage("Users A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -1068,7 +1089,7 @@ namespace MetaPlanner.Control
                     {
                         FieldValueSet fieldsChange = new FieldValueSet();
                         fieldsChange.AdditionalData = additionalData;
-                        object obj = await GraphClient.Sites[config.Site].Lists["users"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        object obj = GraphClient.Sites[config.Site].Lists["users"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
                         upd++;
                         mainPage.DisplayMessage("Users A: " + add + " D: " + del + " U:" + upd);
                     }
