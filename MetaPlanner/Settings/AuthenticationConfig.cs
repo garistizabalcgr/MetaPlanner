@@ -29,6 +29,10 @@ namespace MetaPlanner
         /// </summary>
         public string Scopes { get; set; }
 
+        /// <summary>
+        /// Scope for API call comma separated
+        /// </summary>
+        public int ChunkSize { get; set; }
 
         /// <summary>
         /// Array of scopes (splited)

@@ -226,7 +226,7 @@ namespace MetaPlanner.Control
                 }
             }
             #endregion
-            App.logger.Information("Plan Added: " + add + " Deleted: " + del + " Updated:" + upd);
+            App.logger.Information("ConciliationPlans Plan Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
         #endregion
 
@@ -384,7 +384,7 @@ namespace MetaPlanner.Control
             }
             #endregion
 
-            App.logger.Information("Buckets Added: " + add + " Deleted: " + del + " Updated:" + upd);
+            App.logger.Information("ConciliationBuckets Buckets Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
 
         #endregion
@@ -485,7 +485,7 @@ namespace MetaPlanner.Control
                     PlannerTasks.Add(myTask.TaskId, myTask);
                     GetPlannerAssignment(task);
                 }
-                App.logger.Information("Start ProcessTasks" + PlannerTasks.Count);
+                App.logger.Information("GetPlannerTasks Start " + PlannerTasks.Count);
             }
         }
 
@@ -622,7 +622,7 @@ namespace MetaPlanner.Control
                     };
                     try
                     {
-                        if (add % 100 != 0)
+                        if (add % config.ChunkSize != 0)
                         {
                             var a = GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
                         }
@@ -633,10 +633,10 @@ namespace MetaPlanner.Control
                         add++;
                         mainPage.DisplayMessage("Task A: " + add + " D: " + del + " U:" + upd);
                     }
-                    catch (Exception exAdd)
+                    catch (Exception exception)
                     {
-                        mainPage.DisplayMessage($"Task Error Adding:{System.Environment.NewLine}{exAdd}" + taskItem.Name);
-                        App.logger.Error(exAdd.Message);
+                        mainPage.DisplayMessage($"Task Error Adding:{System.Environment.NewLine}{exception}" + taskItem.Name);
+                        App.logger.Error("ConciliationTasks Add " + exception.Message);
                     }
                 }
             }
@@ -650,7 +650,7 @@ namespace MetaPlanner.Control
                 {
                     try
                     {
-                        if (del % 100 != 0)
+                        if (del % config.ChunkSize != 0)
                         {
                             GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                         }
@@ -664,7 +664,7 @@ namespace MetaPlanner.Control
                     catch (Exception exDel)
                     {
                         mainPage.DisplayMessage($"Error Deleting:{System.Environment.NewLine}{exDel}");
-                        App.logger.Error(exDel.Message);
+                        App.logger.Error("ConciliationTasks Delete "+ exDel.Message);
                     }
                 }
 
@@ -850,7 +850,7 @@ namespace MetaPlanner.Control
 
                                 try
                                 {
-                                    if (upd % 100 != 0)
+                                    if (upd % config.ChunkSize != 0)
                                     {
                                         var u = GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
                                     }
@@ -861,23 +861,23 @@ namespace MetaPlanner.Control
                                     upd++;
                                     mainPage.DisplayMessage("Task A: " + add + " D: " + del + " U:" + upd);
                                 }
-                                catch (Exception exUpd)
+                                catch (Exception exception)
                                 {
-                                    mainPage.DisplayMessage($"Task Error Updating:{System.Environment.NewLine}{exUpd}" + entry.Key);
-                                    App.logger.Error(exUpd.Message);
+                                    mainPage.DisplayMessage($"Task Error Updating:{System.Environment.NewLine}{exception}" + entry.Key);
+                                    App.logger.Error("ConciliationTasks Update " + exception.Message);
                                 }
                             }
                         }
                         catch (Exception exception)
                         {
                             mainPage.DisplayMessage($"Task Error Updating:{System.Environment.NewLine}{exception}" + entry.Key);
-                            App.logger.Error(exception.Message);
+                            App.logger.Error("ConciliationTasks Update " + exception.Message);
                         }
                     }
                 }
                 #endregion
 
-                App.logger.Information("Task Added: " + add + " Deleted: " + del + " Updated:" + upd);
+                App.logger.Information("ConciliationTasks Task Added: " + add + " Deleted: " + del + " Updated:" + upd);
             }
         }
 
@@ -906,14 +906,22 @@ namespace MetaPlanner.Control
                     };
                     try
                     {
-                        var a =  GraphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneeItem);
+                        if (add % config.ChunkSize != 0)
+                        {
+
+                            var a = GraphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneeItem);
+                        }
+                        else
+                        {
+                            var a = await GraphClient.Sites[config.Site].Lists["assignees"].Items.Request().AddAsync(assigneeItem);
+                        }
                         add++;
                         mainPage.DisplayMessage("Assignees Added: " + add + " Deleted: " + del);
                     }
-                    catch (Exception exAdd)
+                    catch (Exception exception)
                     {
-                        mainPage.DisplayMessage($"Error Adding:{System.Environment.NewLine}{exAdd}");
-                        App.logger.Error(exAdd.Message);
+                        mainPage.DisplayMessage($"Error Adding:{System.Environment.NewLine}{exception}");
+                        App.logger.Error("ConciliationAssignments Add " + exception.Message);
                     }
                 }
             }
@@ -927,21 +935,29 @@ namespace MetaPlanner.Control
                 {
                     try
                     {
-                        GraphClient.Sites[config.Site].Lists["assignees"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        if (add % config.ChunkSize != 0)
+                        {
+                            GraphClient.Sites[config.Site].Lists["assignees"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        }
+                        else
+                        {
+                           await GraphClient.Sites[config.Site].Lists["assignees"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                        }
+
                         del++;
                         mainPage.DisplayMessage("Assignees Added: " + add + " Deleted: " + del);
                     }
-                    catch (Exception exDel)
+                    catch (Exception exception)
                     {
-                        mainPage.DisplayMessage($"Error Deleting:{System.Environment.NewLine}{exDel}");
-                        App.logger.Error(exDel.Message);
+                        mainPage.DisplayMessage($"Error Deleting:{System.Environment.NewLine}{exception}");
+                        App.logger.Error("ConciliationAssignments Add " + exception.Message);
                     }
                 }
             }
             #endregion
 
             mainPage.DisplayMessage("Assignees Added: " + add + " Deleted: " + del);
-            App.logger.Information("Assignees Added: " + add + " Deleted: " + del);
+            App.logger.Information("ConciliationAssignments Assignees Added: " + add + " Deleted: " + del);
         }
         #endregion
 
@@ -977,7 +993,7 @@ namespace MetaPlanner.Control
                     }
                     catch (Exception exeption)
                     {
-                        App.logger.Error(exeption.Message);
+                        App.logger.Error("GetPlannerUsers " + exeption.Message);
                     }
                 }
         
@@ -1096,7 +1112,7 @@ namespace MetaPlanner.Control
                 }
             }
             #endregion
-            App.logger.Information("Plan Added: " + add + " Deleted: " + del + " Updated:" + upd);
+            App.logger.Information("ConciliationUsers Users Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
         #endregion
 
@@ -1169,7 +1185,7 @@ namespace MetaPlanner.Control
             {
                 // A MsalUiRequiredException happened on AcquireTokenSilentAsync. This indicates you need to call AcquireTokenAsync to acquire a token
                 Debug.WriteLine($"MsalUiRequiredException: {ex.Message}");
-                App.logger.Error(ex.Message);
+                App.logger.Error("SignInUserAndGetTokenUsingMSAL " + ex.Message);
                 authResult = await PublicClientApp.AcquireTokenInteractive(scopes)
                                                   .ExecuteAsync()
                                                   .ConfigureAwait(false);
@@ -1218,15 +1234,24 @@ namespace MetaPlanner.Control
                     break;
                 }
             }
+            int counter = 0; 
             foreach (ListItem item in allItems)
             {
                 try
                 {
-                    await GraphClient.Sites[config.Site].Lists[listName].Items[item.Id].Request().DeleteAsync();
+                    counter++;
+                    if (counter % config.ChunkSize != 0)
+                    {
+                         GraphClient.Sites[config.Site].Lists[listName].Items[item.Id].Request().DeleteAsync();
+                    }
+                    else
+                    {
+                        await GraphClient.Sites[config.Site].Lists[listName].Items[item.Id].Request().DeleteAsync();
+                    }
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    App.logger.Error(ex.Message);
+                    App.logger.Error("CleanSharepointList " + exception.Message);
                 }
             }
         }
@@ -1237,11 +1262,12 @@ namespace MetaPlanner.Control
 
             GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
-             CleanSharepointList("buckets");
-             CleanSharepointList("plans");
-             CleanSharepointList("users");
-             CleanSharepointList("assignees");
-            await CleanSharepointList("tasks");
+            
+            CleanSharepointList("tasks");
+            CleanSharepointList("users");
+            CleanSharepointList("buckets");
+            CleanSharepointList("plans");
+            await CleanSharepointList("assignees");
 
 
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
@@ -1292,7 +1318,7 @@ namespace MetaPlanner.Control
             {
                 //theFile = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(theFile);
                 //var resNew = await GraphClient.Sites[config.Site].Drive.Items[theFile.Id].Content.Request().PutAsync<DriveItem>(fs);
-                App.logger.Error(exception.Message);
+                App.logger.Error("WriteAndUpload " + exception.Message);
                 //mainPage.DisplayMessage(ex.Message);
             }
 
