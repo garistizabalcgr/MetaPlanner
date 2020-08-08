@@ -37,7 +37,7 @@ namespace MetaPlanner.Control
         private GraphServiceClient GraphClient;
 
         // Configuration
-        public static AuthenticationConfig config = AuthenticationConfig.ReadFromJsonFile();
+        public static Configuration config = Configuration.ReadFromJsonFile();
 
         // The MSAL Public client GraphServiceClient
         private static IPublicClientApplication PublicClientApp;
@@ -123,6 +123,8 @@ namespace MetaPlanner.Control
                         Visible = theHierarchy.Visible
                     });
             }
+
+            App.logger.Information("GetPlannerPlans Total: " + PlannerPlans.Count);
         }
 
         /// <summary>
@@ -138,7 +140,7 @@ namespace MetaPlanner.Control
 
                 await WriteAndUpload(PlannerPlans, "plans");
 
-                if (config.IsSharePointListEnabled.Equals("true"))
+                if (config.IsSharePointListEnabled)
                 {
                     #region Get bulk data from SharePoint
                     var listPlans = await GetSharePointList("plans");
@@ -330,6 +332,7 @@ namespace MetaPlanner.Control
                     });
                 }
             }
+            App.logger.Information("GetPlannerBuckets Total: " + PlannerBuckets.Count);
         }
 
         /// <summary
@@ -343,7 +346,7 @@ namespace MetaPlanner.Control
                 await GetPlannerBuckets();
                 await WriteAndUpload(PlannerBuckets, "buckets");
 
-                if (config.IsSharePointListEnabled.Equals("true"))
+                if (config.IsSharePointListEnabled)
                 {
                     #region Get bulk data from SharePoint
                     var listBuckets = await GetSharePointList("buckets");
@@ -561,7 +564,8 @@ namespace MetaPlanner.Control
                     GetPlannerAssignment(task);
                 }
             }
-            App.logger.Information("GetPlannerTasks End " + PlannerTasks.Count);
+            App.logger.Information("GetPlannerTasks Total: " + PlannerTasks.Count);
+            App.logger.Information("GetPlannerAssignment Total: " + PlannerAssignments.Count);
         }
 
         /// <summary
@@ -593,7 +597,7 @@ namespace MetaPlanner.Control
                 await WriteAndUpload(PlannerTasks, "tasks");
                 await WriteAndUpload(PlannerAssignments, "assignees");
 
-                if (config.IsSharePointListEnabled.Equals("true"))
+                if (config.IsSharePointListEnabled)
                 {
 
                     #region Get bulk data from SharePoint Tasks
@@ -1097,9 +1101,8 @@ namespace MetaPlanner.Control
                         }
                     }
                 }
-        
-
             }
+            App.logger.Information("GetPlannerUsers Total: " + PlannerUsers.Count);
         }
 
        
@@ -1111,7 +1114,7 @@ namespace MetaPlanner.Control
             await GetPlannerUsers();
             await WriteAndUpload(PlannerUsers, "users");
 
-            if (config.IsSharePointListEnabled.Equals("true"))
+            if (config.IsSharePointListEnabled)
             {
                 #region Get bulk data from SharePoint
                 var listUsers = await GetSharePointList("users");
@@ -1347,7 +1350,7 @@ namespace MetaPlanner.Control
                     break;
                 }
             }
-            mainPage.DisplayMessage("CleanSharepointList " + listName + " "+ allItems.Count);
+
             int counter = 0; 
             foreach (ListItem item in allItems)
             {
@@ -1368,7 +1371,8 @@ namespace MetaPlanner.Control
                     App.logger.Error("CleanSharepointList " + exception.Message);
                 }
             }
-            mainPage.DisplayMessage("CleanSharepointList Done");
+            mainPage.DisplayMessage("CleanSharepointList " + listName + " " + allItems.Count);
+            App.logger.Information("CleanSharepointList " + listName + " " + allItems.Count);
         }
 
         public async Task CleanAllSharePointLists()
@@ -1416,6 +1420,7 @@ namespace MetaPlanner.Control
             //Prepare the stream to upload
             string fileName =  name + ".csv";
             await writer.Write(dictionary.Values, storageFolder, fileName);
+            App.logger.Information("Write" + fileName + " " + dictionary.Values.Count + "lines");
             FileStream fileStream = new FileStream(storageFolder.Path + "\\" + fileName, FileMode.Open, FileAccess.Read);
 
             DriveItem theFile = new DriveItem() { Name = fileName, File = new Microsoft.Graph.File() };

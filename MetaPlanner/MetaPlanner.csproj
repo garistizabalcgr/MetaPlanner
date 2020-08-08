@@ -131,7 +131,7 @@
     <Compile Include="Model\MetaPlannerUser.cs" />
     <Compile Include="Output\Writer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Settings\AuthenticationConfig.cs" />
+    <Compile Include="Settings\Configuration.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">

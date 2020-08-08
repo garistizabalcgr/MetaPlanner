@@ -10,7 +10,7 @@ namespace MetaPlanner
     /// Description of the configuration of an AzureAD public client application (desktop/mobile application). This should
     /// match the application registration done in the Azure portal
     /// </summary>
-    public class AuthenticationConfig
+    public class Configuration
     {
         /// <summary>
         /// instance of Azure AD, for example public Azure or a Sovereign cloud (Azure China, Germany, US government, etc ...)
@@ -100,14 +100,14 @@ namespace MetaPlanner
 
         public string FolderName { get; set; }
 
-        public string IsSharePointListEnabled { get; set; }
+        public bool IsSharePointListEnabled { get; set; }
 
         /// <summary>
         /// Reads the configuration from a json file
         /// </summary>
         /// <param name="path">Path to the configuration json file</param>
         /// <returns>AuthenticationConfig read from the json file</returns>
-        public static AuthenticationConfig ReadFromJsonFile()
+        public static Configuration ReadFromJsonFile()
         {
             IConfigurationRoot Configuration;
             string path = Package.Current.InstalledLocation.Path;
@@ -116,7 +116,7 @@ namespace MetaPlanner
                 .AddJsonFile("appsettings.json")
                 .AddJsonFile("appsettings.production.json", optional: true);
             Configuration = builder.Build();
-            return Configuration.Get<AuthenticationConfig>();
+            return Configuration.Get<Configuration>();
         }
 
     }
