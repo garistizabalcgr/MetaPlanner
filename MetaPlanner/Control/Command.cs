@@ -1401,44 +1401,67 @@ namespace MetaPlanner.Control
             DriveItem root = await GraphClient.Sites[config.Site].Drives[drive.Id].Root.Request().GetAsync();
             IDriveItemChildrenCollectionPage children = await GraphClient.Drives[drive.Id].Items[root.Id].Children.Request().GetAsync();//TODO user root instead items
             DriveItem theFolder = children.Where(c => c.Name == config.FolderName).FirstOrDefault();
-
-            string folderId;
-            
+           
             
             // If does not exist create it
             if (theFolder == null)
             {
-                theFolder = new DriveItem { Name = config.FolderName, Folder = new Folder() };
-                var newFolder =  await GraphClient.Drives[drive.Id].Root.Children.Request().AddAsync(theFolder);
-                folderId = newFolder.Id;
+                theFolder = new DriveItem { 
+                    Name = config.FolderName, 
+                    Folder = new Folder()
+                };
+                theFolder =  await GraphClient.Drives[drive.Id].Root.Children.Request().AddAsync(theFolder);
             }
-            else
-            {
-                folderId = theFolder.Id;
-            }
+
 
             //Prepare the stream to upload
             string fileName =  name + ".csv";
             await writer.Write(dictionary.Values, storageFolder, fileName);
-            App.logger.Information("Write" + fileName + " " + dictionary.Values.Count + "lines");
+            App.logger.Information("Write " + fileName + " " + dictionary.Values.Count + " lines");
             FileStream fileStream = new FileStream(storageFolder.Path + "\\" + fileName, FileMode.Open, FileAccess.Read);
 
-            DriveItem theFile = new DriveItem() { Name = fileName, File = new Microsoft.Graph.File() };
-
+            DriveItem theFile = new DriveItem() { 
+                Name = fileName, 
+                File = new Microsoft.Graph.File(),
+            };
 
             try
             {
+                //small file  < 4 Mb
                 
-                var file = await GraphClient.Sites[config.Site].Drives[drive.Id].Root.Children[theFile.Name].Request().GetAsync();
-                var resOld = await GraphClient.Sites[config.Site].Drives[drive.Id].Items[file.Id].Content.Request().PutAsync<DriveItem>(fileStream);
+                var uploadFile = await GraphClient.Sites[config.Site].
+                    Drives[drive.Id].
+                    Root.ItemWithPath(config.FolderName + "/" + fileName).
+                    Content.Request().
+                    PutAsync<DriveItem>(fileStream);
 
+                mainPage.DisplayMessage("Ok "+ config.FolderName + "/" + fileName);
+
+                //large file 
+                /*
+                var uploadSession = GraphClient.Sites[config.Site].
+                    Drives[drive.Id].
+                    Root.ItemWithPath(config.FolderName + "/" + fileName)
+                    .CreateUploadSession()
+                    .Request().PostAsync().Result;
+
+                var maxChunkSize = 50 * 1024;
+                var largeUploadTask = new LargeFileUploadTask<DriveItem>(uploadSession, fileStream, maxChunkSize);
+                IProgress<long> uploadProgress = new Progress<long>(uploadBytes =>
+                {
+                    mainPage.DisplayMessage($"Uploaded{uploadBytes} of {fileStream.Length} bytes");
+                });
+                UploadResult<DriveItem> uploadResult = largeUploadTask.UploadAsync(uploadProgress).Result;
+                if (uploadResult.UploadSucceeded)
+                {
+                    mainPage.DisplayMessage("Uploaded Ok");
+                }
+                */
             }
             catch (Exception exception)
             {
-                //theFile = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(theFile);
-                //var resNew = await GraphClient.Sites[config.Site].Drive.Items[theFile.Id].Content.Request().PutAsync<DriveItem>(fs);
+                mainPage.DisplayMessage("Error WriteAndUpload " +exception.Message);
                 App.logger.Error("WriteAndUpload " + exception.Message);
-                //mainPage.DisplayMessage(ex.Message);
             }
 
             //TimeStamp to versioning an historic trace
@@ -1450,16 +1473,16 @@ namespace MetaPlanner.Control
                 DriveItem driveItemStamp = new DriveItem();
                 driveItemStamp.Name = fileNameT;
                 driveItemStamp.File = new Microsoft.Graph.File();
+
                 try
                 {
-                    var fileT = await GraphClient.Sites[config.Site].Drive.Root.Children[driveItemStamp.Name].Request().GetAsync();
-                    var resOldT = await GraphClient.Sites[config.Site].Drive.Items[fileT.Id].Content.Request().PutAsync<DriveItem>(fsT);
+                    var uploadFile = await GraphClient.Sites[config.Site].Drives[drive.Id].Root.ItemWithPath(config.FolderName + "/" + fileNameT).Content.Request().PutAsync<DriveItem>(fsT);
+                    mainPage.DisplayMessage("Ok " + config.FolderName + "/" + fileNameT);
                 }
-                catch (Exception ex1)
+                catch (Exception exception)
                 {
-                    driveItemStamp = await GraphClient.Sites[config.Site].Drive.Root.Children.Request().AddAsync(driveItemStamp);
-                    var resNewT = await GraphClient.Sites[config.Site].Drive.Items[driveItemStamp.Id].Content.Request().PutAsync<DriveItem>(fsT);
-                    mainPage.DisplayMessage(ex1.Message);
+                    mainPage.DisplayMessage(exception.Message);
+                    App.logger.Error("WriteAndUpload " + exception.Message);
                 }
             }
         }
