@@ -214,7 +214,15 @@ namespace MetaPlanner.Control
             {
                 if (!PlannerPlans.ContainsKey(entry.Key))
                 {
-                    GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    if (del % config.ChunkSize != 0)
+                    {
+                        GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    }
+                    else
+                    {
+                        await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    }
+                       
                     del++;
                     mainPage.DisplayMessage("Plan A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -434,7 +442,16 @@ namespace MetaPlanner.Control
                     {
                         FieldValueSet fieldsChange = new FieldValueSet();
                         fieldsChange.AdditionalData = additionalData;
-                        GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+
+                        if (upd % config.ChunkSize != 0)
+                        {
+                            object obj = GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        }
+                        else
+                        {
+                            object obj = await GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        }
+                            
                         upd++;
                         mainPage.DisplayMessage("Bucket A: " + add + " D: " + del + " U:" + upd);
                     }
@@ -1141,7 +1158,16 @@ namespace MetaPlanner.Control
                             }
                         }
                     };
-                    GraphClient.Sites[config.Site].Lists["users"].Items.Request().AddAsync(userItem);
+
+
+                    if (add % config.ChunkSize != 0)
+                    {
+                        GraphClient.Sites[config.Site].Lists["users"].Items.Request().AddAsync(userItem);
+                    }
+                    else
+                    {
+                        await GraphClient.Sites[config.Site].Lists["users"].Items.Request().AddAsync(userItem);
+                    }
                     add++;
                     mainPage.DisplayMessage("Users A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -1353,7 +1379,6 @@ namespace MetaPlanner.Control
 
             
             CleanSharepointList("tasks");
-            ///CleanSharepointList("users");
             CleanSharepointList("buckets");
             CleanSharepointList("plans");
             await CleanSharepointList("assignees");
