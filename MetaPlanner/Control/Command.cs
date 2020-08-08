@@ -518,8 +518,8 @@ namespace MetaPlanner.Control
                     PlannerTasks.Add(myTask.TaskId, myTask);
                     GetPlannerAssignment(task);
                 }
-                App.logger.Information("GetPlannerTasks Start " + PlannerTasks.Count);
             }
+            App.logger.Information("GetPlannerTasks End " + PlannerTasks.Count);
         }
 
         /// <summary
@@ -607,7 +607,7 @@ namespace MetaPlanner.Control
             int add = 0;
             int del = 0;
             int upd = 0;
-            int counter = 0;
+
             #region Add from planner not in sharepoint
             //Add new from Planner to SharePoint
             foreach (KeyValuePair<string, MetaPlannerTask> entry in PlannerTasks)
@@ -909,9 +909,10 @@ namespace MetaPlanner.Control
                     }
                 }
                 #endregion
-
-                App.logger.Information("ConciliationTasks Task Added: " + add + " Deleted: " + del + " Updated:" + upd);
             }
+
+            mainPage.DisplayMessage("Task Added: " + add + " Deleted: " + del + " Updated: " + upd);
+            App.logger.Information("ConciliationTasks Task Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
 
 
@@ -982,7 +983,7 @@ namespace MetaPlanner.Control
                     catch (Exception exception)
                     {
                         mainPage.DisplayMessage($"Error Deleting:{System.Environment.NewLine}{exception}");
-                        App.logger.Error("ConciliationAssignments Add " + exception.Message);
+                        App.logger.Error("ConciliationAssignments Delete " + exception.Message);
                     }
                 }
             }
@@ -1025,6 +1026,13 @@ namespace MetaPlanner.Control
                     catch (Exception exeption)
                     {
                         App.logger.Error("GetPlannerUsers " + exeption.Message);
+                        PlannerUsers.Add(assignee.UserId, new MetaPlannerUser()
+                        {
+                            UserId = assignee.UserId,
+                            UserPrincipalName = assignee.UserId,
+                            TheName = assignee.UserId,
+                            Mail = assignee.UserId
+                        });
                     }
                 }
         
@@ -1265,6 +1273,7 @@ namespace MetaPlanner.Control
                     break;
                 }
             }
+            mainPage.DisplayMessage("CleanSharepointList " + listName + " "+ allItems.Count);
             int counter = 0; 
             foreach (ListItem item in allItems)
             {
@@ -1285,6 +1294,7 @@ namespace MetaPlanner.Control
                     App.logger.Error("CleanSharepointList " + exception.Message);
                 }
             }
+            mainPage.DisplayMessage("CleanSharepointList Done");
         }
 
         public async Task CleanAllSharePointLists()
