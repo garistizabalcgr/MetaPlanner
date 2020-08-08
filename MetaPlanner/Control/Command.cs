@@ -84,9 +84,29 @@ namespace MetaPlanner.Control
                     break;
                 }
             }
+
+            //Get hierarchy
+
+            var listHierarchy = await GetSharePointList("hierarchy"); 
+            Dictionary<string, MetaPlannerHierarchy> sharePointHierarchy = new Dictionary<string, MetaPlannerHierarchy>();
+            foreach (ListItem item in listHierarchy)
+            {
+                MetaPlannerHierarchy hierarchy = new MetaPlannerHierarchy(item.Fields.AdditionalData);
+                sharePointHierarchy.Add(hierarchy.PlanId, hierarchy);
+            }
+
             PlannerPlans = new Dictionary<string, MetaPlannerPlan>();
             foreach (PlannerPlan p in listPlanner)
             {
+                MetaPlannerHierarchy theHierarchy;
+                if (!sharePointHierarchy.TryGetValue(p.Id, out theHierarchy))
+                {
+                    theHierarchy = new MetaPlannerHierarchy();
+                    theHierarchy.PlanId = p.Id;
+                    theHierarchy.ParentId = null;
+                    theHierarchy.Visible = "true";
+                }
+
                 var group = await GraphClient.Groups[p.Owner].Request().GetAsync();
                 PlannerPlans.Add(p.Id,
                     new MetaPlannerPlan()
@@ -98,7 +118,9 @@ namespace MetaPlanner.Control
                         GroupName = group.DisplayName,
                         GroupDescription = group.Description,
                         GroupMail = group.Mail,
-                        Url = "https://tasks.office.com/" + config.Tenant + "/Home/PlanViews/" + p.Id
+                        Url = "https://tasks.office.com/" + config.Tenant + "/Home/PlanViews/" + p.Id,
+                        ParentId = theHierarchy.ParentId,
+                        Visible = theHierarchy.Visible
                     });
             }
         }
@@ -164,7 +186,9 @@ namespace MetaPlanner.Control
                                 {"GroupName",  entry.Value.GroupName },
                                 {"GroupDescription",  entry.Value.GroupDescription},
                                 {"GroupMail",  entry.Value.GroupMail},
-                                {"Url", entry.Value.Url}
+                                {"Url", entry.Value.Url},
+                                {"ParentId",entry.Value.ParentId },
+                                {"Visible",entry.Value.Visible }
                             }
                         }
                     };
@@ -214,7 +238,16 @@ namespace MetaPlanner.Control
                     {
                         additionalData.Add("GroupName", origin.GroupName);
                     }
-                    //CreteDagte is readOnly
+                    if (!String.Equals(origin.ParentId, destination.ParentId))
+                    {
+                        additionalData.Add("ParentId", origin.ParentId);
+                    }
+                    if (!String.Equals(origin.Visible, destination.Visible))
+                    {
+                        additionalData.Add("Visible", origin.Visible);
+                    }
+
+                    //CreateDate is readOnly
                     if (additionalData.Keys.Count > 0)
                     {
                         FieldValueSet fieldsChange = new FieldValueSet();
@@ -943,7 +976,6 @@ namespace MetaPlanner.Control
                         {
                            await GraphClient.Sites[config.Site].Lists["assignees"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                         }
-
                         del++;
                         mainPage.DisplayMessage("Assignees Added: " + add + " Deleted: " + del);
                     }
@@ -960,7 +992,6 @@ namespace MetaPlanner.Control
             App.logger.Information("ConciliationAssignments Assignees Added: " + add + " Deleted: " + del);
         }
         #endregion
-
 
         #region Users
         /// <summary>
