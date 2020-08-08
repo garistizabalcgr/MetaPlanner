@@ -85,7 +85,7 @@ namespace MetaPlanner.Control
                 }
             }
 
-            //Get hierarchy
+            //Get hierarchy from Sharepoint
 
             var listHierarchy = await GetSharePointList("hierarchy"); 
             Dictionary<string, MetaPlannerHierarchy> sharePointHierarchy = new Dictionary<string, MetaPlannerHierarchy>();
@@ -192,7 +192,16 @@ namespace MetaPlanner.Control
                             }
                         }
                     };
-                    GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
+
+                    if (add % config.ChunkSize != 0)
+                    {
+                        var a = GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
+                    }
+                    else
+                    {
+                        var a = await GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
+                    }
+                   
                     add++;
                     mainPage.DisplayMessage( "Plan A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -252,7 +261,15 @@ namespace MetaPlanner.Control
                     {
                         FieldValueSet fieldsChange = new FieldValueSet();
                         fieldsChange.AdditionalData = additionalData;
-                        object obj =  GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+
+                        if (upd % config.ChunkSize != 0)
+                        {
+                            object obj = GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        }
+                        else
+                        {
+                           object obj = await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        }
                         upd++;
                         mainPage.DisplayMessage("Plan A: " + add + " D: " + del + " U:" + upd);
                     }
@@ -367,7 +384,15 @@ namespace MetaPlanner.Control
                             }
                         }
                     };
-                    GraphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+                    if (add % config.ChunkSize != 0)
+                    {
+                        object obj = GraphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+                    }
+                    else
+                    {
+                        object obj = await GraphClient.Sites[config.Site].Lists["buckets"].Items.Request().AddAsync(bucketItem);
+                    }
+             
                     add++;
                     mainPage.DisplayMessage("Bucket A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -380,7 +405,7 @@ namespace MetaPlanner.Control
             {
                 if (!PlannerBuckets.ContainsKey(entry.Key))
                 {
-                    GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Request().DeleteAsync();
+                    await GraphClient.Sites[config.Site].Lists["buckets"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                     del++;
                     mainPage.DisplayMessage("Bucket A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -1005,6 +1030,16 @@ namespace MetaPlanner.Control
                 await GetPlannerTasks();
             }
 
+
+             //Get historic users from Sharepoint
+            var listUsers = await GetSharePointList("users");
+            Dictionary<string, MetaPlannerUser> sharePointUsers = new Dictionary<string, MetaPlannerUser>();
+            foreach (ListItem item in listUsers)
+            {
+                MetaPlannerUser user = new MetaPlannerUser(item.Fields.AdditionalData);
+                sharePointUsers.Add(user.UserId, user);
+            }
+
             PlannerUsers = new Dictionary<string, MetaPlannerUser>();
 
             foreach (MetaPlannerAssignment assignee in PlannerAssignments.Values)
@@ -1026,13 +1061,23 @@ namespace MetaPlanner.Control
                     catch (Exception exeption)
                     {
                         App.logger.Error("GetPlannerUsers " + exeption.Message);
-                        PlannerUsers.Add(assignee.UserId, new MetaPlannerUser()
+                        //Get from historic data
+                        MetaPlannerUser theUser;
+                        if (sharePointUsers.TryGetValue(assignee.UserId, out theUser))
                         {
-                            UserId = assignee.UserId,
-                            UserPrincipalName = assignee.UserId,
-                            TheName = assignee.UserId,
-                            Mail = assignee.UserId
-                        });
+                            PlannerUsers.Add(theUser.UserId, theUser);
+                        }
+                        else 
+                        //is totally forgotten
+                        {
+                            PlannerUsers.Add(assignee.UserId, new MetaPlannerUser()
+                            {
+                                UserId = assignee.UserId,
+                                UserPrincipalName = assignee.UserId,
+                                TheName = assignee.UserId,
+                                Mail = assignee.UserId
+                            });
+                        }
                     }
                 }
         
