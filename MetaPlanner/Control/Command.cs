@@ -1103,6 +1103,7 @@ namespace MetaPlanner.Control
             }
             #endregion
 
+            /*
             #region Delete in sharepoint not in planner
             //Delete from SharePoint not in Planner
             foreach (KeyValuePair<string, MetaPlannerUser> entry in sharePointUsers)
@@ -1115,7 +1116,8 @@ namespace MetaPlanner.Control
                 }
             }
             #endregion
-
+            */
+            /*
             #region Update in Sharepoint changes from planner
             //Add new from Planner to SharePoint
             foreach (KeyValuePair<string, MetaPlannerPlan> entry in PlannerPlans)
@@ -1151,6 +1153,7 @@ namespace MetaPlanner.Control
                 }
             }
             #endregion
+            */
             App.logger.Information("ConciliationUsers Users Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
         #endregion
@@ -1305,7 +1308,7 @@ namespace MetaPlanner.Control
 
             
             CleanSharepointList("tasks");
-            CleanSharepointList("users");
+            ///CleanSharepointList("users");
             CleanSharepointList("buckets");
             CleanSharepointList("plans");
             await CleanSharepointList("assignees");
