@@ -186,7 +186,8 @@ namespace MetaPlanner
             {
                 App.logger.Information("Start ProcessAll");
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
-
+               
+                DisplayMessage("Start");
 
                 await Control.ProcessPlans();
                 RadDataGrid.DataContext = Control.PlannerPlans.Values;
@@ -200,6 +201,7 @@ namespace MetaPlanner
                 await Control.ProcessUsers();
                 RadDataGrid.DataContext = Control.PlannerUsers.Values;
 
+                DisplayMessage("Done");
 
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
                 App.logger.Information("End ProcessAll");

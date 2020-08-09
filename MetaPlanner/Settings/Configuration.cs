@@ -100,6 +100,8 @@ namespace MetaPlanner
 
         public string FolderName { get; set; }
 
+        public string SubFolderName { get; set; }
+
         public bool IsSharePointListEnabled { get; set; }
 
         /// <summary>

@@ -85,8 +85,9 @@ namespace MetaPlanner.Control
                 }
             }
 
-            //Get hierarchy from Sharepoint
+            mainPage.DisplayMessage("GetPlannerPlans getting " + listPlanner.Count);
 
+            //Get hierarchy from Sharepoint
             var listHierarchy = await GetSharePointList("hierarchy"); 
             Dictionary<string, MetaPlannerHierarchy> sharePointHierarchy = new Dictionary<string, MetaPlannerHierarchy>();
             foreach (ListItem item in listHierarchy)
@@ -132,7 +133,6 @@ namespace MetaPlanner.Control
         /// </summary>
         public async Task ProcessPlans()
         {
-
                  // Sign-in user using MSAL and obtain an access token for MS Graph
                 GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
@@ -154,13 +154,10 @@ namespace MetaPlanner.Control
                         sharePointPlans.Add(plan.PlanId, plan);
                         itemIds.Add(plan.PlanId, item.Id);
                         items.Add(item.Id, item);
-
                     }
                     #endregion
                     await ConciliationPlans(sharePointPlans, itemIds, items);
                 }
-
-
         }
 
         private async Task ConciliationPlans(Dictionary<string, MetaPlannerPlan> sharePointPlans, Dictionary<string, string> itemIds, Dictionary<string, ListItem> items)
@@ -194,7 +191,6 @@ namespace MetaPlanner.Control
                             }
                         }
                     };
-
                     if (add % config.ChunkSize != 0)
                     {
                         var a = GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
@@ -203,7 +199,6 @@ namespace MetaPlanner.Control
                     {
                         var a = await GraphClient.Sites[config.Site].Lists["plans"].Items.Request().AddAsync(planItem);
                     }
-                   
                     add++;
                     mainPage.DisplayMessage( "Plan A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -224,7 +219,6 @@ namespace MetaPlanner.Control
                     {
                         await GraphClient.Sites[config.Site].Lists["plans"].Items[itemIds[entry.Key]].Request().DeleteAsync();
                     }
-                       
                     del++;
                     mainPage.DisplayMessage("Plan A: " + add + " D: " + del + " U:" + upd);
                 }
@@ -286,6 +280,7 @@ namespace MetaPlanner.Control
                 }
             }
             #endregion
+            
             App.logger.Information("ConciliationPlans Plan Added: " + add + " Deleted: " + del + " Updated:" + upd);
         }
         #endregion
@@ -320,6 +315,8 @@ namespace MetaPlanner.Control
                         break;
                     }
                 }
+
+                mainPage.DisplayMessage("GetPlannerBuckets getting " + listBuckets.Count);
 
                 foreach (PlannerBucket bucket in listBuckets)
                 {
@@ -499,6 +496,7 @@ namespace MetaPlanner.Control
                         break;
                     }
                 }
+                mainPage.DisplayMessage("GetPlannerTasks getting " + listTasks.Count);
 
                 foreach (PlannerTask task in listTasks)
                 {
@@ -582,6 +580,7 @@ namespace MetaPlanner.Control
                     UserId = userId
                 });
             }
+            mainPage.DisplayMessage("GetPlannerAssignment getting " + task.Assignments.Count);
         }
 
         /// <summary
@@ -1061,6 +1060,8 @@ namespace MetaPlanner.Control
                 sharePointUsers.Add(user.UserId, user);
             }
 
+            mainPage.DisplayMessage("GetPlannerUsers getting " + listUsers.Count);
+
             PlannerUsers = new Dictionary<string, MetaPlannerUser>();
 
             foreach (MetaPlannerAssignment assignee in PlannerAssignments.Values)
@@ -1102,6 +1103,8 @@ namespace MetaPlanner.Control
                     }
                 }
             }
+
+            mainPage.DisplayMessage("GetPlannerUsers Total: " + PlannerUsers.Count);
             App.logger.Information("GetPlannerUsers Total: " + PlannerUsers.Count);
         }
 
@@ -1232,15 +1235,6 @@ namespace MetaPlanner.Control
         }
         #endregion
 
-        #region All
-        public async Task ProcessAll()
-        {
-            await ProcessPlans();
-            await ProcessBuckets();
-            await ProcessTasks();
-            await ProcessUsers();
-        }
-        #endregion
 
             /// <summary>
             /// Sign in user using MSAL and obtain a token for Microsoft Graph
@@ -1476,8 +1470,8 @@ namespace MetaPlanner.Control
 
                 try
                 {
-                    var uploadFile = await GraphClient.Sites[config.Site].Drives[drive.Id].Root.ItemWithPath(config.FolderName + "/" + fileNameT).Content.Request().PutAsync<DriveItem>(fsT);
-                    mainPage.DisplayMessage("Ok " + config.FolderName + "/" + fileNameT);
+                    var uploadFile = await GraphClient.Sites[config.Site].Drives[drive.Id].Root.ItemWithPath(config.FolderName + "/" +config.SubFolderName+"/"+ fileNameT).Content.Request().PutAsync<DriveItem>(fsT);
+                    mainPage.DisplayMessage("Ok " + config.FolderName + "/" + config.SubFolderName + "/" + fileNameT);
                 }
                 catch (Exception exception)
                 {
