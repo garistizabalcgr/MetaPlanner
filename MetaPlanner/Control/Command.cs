@@ -609,26 +609,40 @@ namespace MetaPlanner.Control
                     foreach (ListItem item in listTasks)
                     {
                         MetaPlannerTask task = new MetaPlannerTask(item.Fields.AdditionalData);
-                        if (task !=null && task.TaskId != null)
+                        if (task != null && task.TaskId != null)
+                        {
                             sharePointTasks.Add(task.TaskId, task);
+                        }
                         else
+                        {
                             mainPage.DisplayMessage("Task is null");
-
+                            App.logger.Error("Task is null");
+                        }
                         if (item.Id != null && task.TaskId != null)
+                        {
                             itemIds.Add(task.TaskId, item.Id);
+                        }
                         else
+                        {
                             mainPage.DisplayMessage("Task is null");
-
+                            App.logger.Error("Task is null");
+                        }
                         if (item != null && item.Id != null)
+                        {
                             items.Add(item.Id, item);
+                        }
                         else
+                        {
                             mainPage.DisplayMessage("Task is null");
+                            App.logger.Error("Task is null");
+                        }
                 }
                     #endregion
-                    await ConciliationTasks(sharePointTasks, itemIds, items);
+                     await ConciliationTasks(sharePointTasks, itemIds, items);
 
-                    #region Get bulk data from SharePoint
-                    var listAssignees = await GetSharePointList("assignees");
+                    mainPage.DisplayMessage("ConciliationTasks called " + sharePointTasks.Count);
+                #region Get bulk data from SharePoint
+                var listAssignees = await GetSharePointList("assignees");
 
                     Dictionary<string, MetaPlannerAssignment> sharePointAsignees = new Dictionary<string, MetaPlannerAssignment>();
                     Dictionary<string, string> itemIdsA = new Dictionary<string, string>();
@@ -657,6 +671,7 @@ namespace MetaPlanner.Control
             //Add new from Planner to SharePoint
             foreach (KeyValuePair<string, MetaPlannerTask> entry in PlannerTasks)
             {
+
                 if (!sharePointTasks.ContainsKey(entry.Key))
                 {
                     var taskItem = new ListItem
@@ -702,11 +717,11 @@ namespace MetaPlanner.Control
                     {
                         if (add % config.ChunkSize != 0)
                         {
-                            var a = GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
+                            var a =  GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
                         }
                         else
                         {
-                            var a = await GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
+                            var b =  await GraphClient.Sites[config.Site].Lists["tasks"].Items.Request().AddAsync(taskItem);
                         }
                         add++;
                         mainPage.DisplayMessage("Task A: " + add + " D: " + del + " U:" + upd);
@@ -742,219 +757,215 @@ namespace MetaPlanner.Control
                     catch (Exception exDel)
                     {
                         mainPage.DisplayMessage($"Error Deleting:{System.Environment.NewLine}{exDel}");
-                        App.logger.Error("ConciliationTasks Delete "+ exDel.Message);
+                        App.logger.Error("ConciliationTasks Delete " + exDel.Message);
                     }
                 }
-
-                #endregion
-
-                #region Update in Sharepoint changes from planner
-                //Add new from Planner to SharePoint
-                foreach (KeyValuePair<string, MetaPlannerTask> mytask in PlannerTasks)
-                {
-                    if (sharePointTasks.ContainsKey(mytask.Key))
-                    {
-                        try
-                        {
-                            MetaPlannerTask origin = PlannerTasks[mytask.Key];
-                            MetaPlannerTask destination = sharePointTasks[mytask.Key];
-
-                           /* if (mytask.Key.Equals("s5Au5aeV00mtsowa8lgn4mQACb7Y"))
-                            {
-                                int x = 1;
-                            }*/
-
-                            Dictionary<string, object> additionalData = new Dictionary<string, object>();
-                            if (!String.Equals(origin.TaskName, destination.TaskName))
-                            {
-                                additionalData.Add("TaskName", origin.TaskName);
-                            }
-                            #region Changes
-                            if (!String.Equals(origin.Prefix, destination.Prefix))
-                            {
-                                additionalData.Add("Prefix", origin.Prefix);
-                            }
-
-                            if (!String.Equals(origin.Hours, destination.Hours))
-                            {
-                                additionalData.Add("Hours", origin.Hours);
-                            }
-
-                            if (!String.Equals(origin.ActiveChecklistItemCount, destination.ActiveChecklistItemCount))
-                            {
-                                additionalData.Add("ActiveChecklistItemCount", origin.ActiveChecklistItemCount);
-                            }
-
-                            if (!String.Equals(origin.AdditionalData, destination.AdditionalData))
-                            {
-                                additionalData.Add("AdditionalData", origin.AdditionalData);
-                            }
-
-                            if (!String.Equals(origin.Category1, destination.Category1))
-                            {
-                                additionalData.Add("Category1", origin.Category1);
-                            }
-
-                            if (!String.Equals(origin.Category2, destination.Category2))
-                            {
-                                additionalData.Add("Category2", origin.Category2);
-                            }
-
-                            if (!String.Equals(origin.Category3, destination.Category3))
-                            {
-                                additionalData.Add("Category3", origin.Category3);
-                            }
-
-                            if (!String.Equals(origin.Category4, destination.Category4))
-                            {
-                                additionalData.Add("Category4", origin.Category4);
-                            }
-
-                            if (!String.Equals(origin.Category5, destination.Category5))
-                            {
-                                additionalData.Add("Category5", origin.Category5);
-                            }
-
-                            if (!String.Equals(origin.Category6, destination.Category6))
-                            {
-                                additionalData.Add("Category6", origin.Category6);
-                            }
-
-                            if (!String.Equals(origin.AssigneePriority, destination.AssigneePriority))
-                            {
-                                additionalData.Add("AssigneePriority", origin.AssigneePriority);
-                            }
-
-                            if (!String.Equals(origin.AssignmentsCount, destination.AssignmentsCount))
-                            {
-                                additionalData.Add("AssignmentsCount", origin.AssignmentsCount);
-                            }
-
-                            if (!String.Equals(origin.BucketId, destination.BucketId))
-                            {
-                                additionalData.Add("BucketId", origin.BucketId);
-                            }
-
-                            if (!String.Equals(origin.PlanId, destination.PlanId))
-                            {
-                                additionalData.Add("PlanId", origin.PlanId);
-                            }
-
-                            if (!String.Equals(origin.ChecklistItemCount, destination.ChecklistItemCount))
-                            {
-                                additionalData.Add("ChecklistItemCount", origin.ChecklistItemCount);
-                            }
-
-                            if (!String.Equals(origin.CompletedBy, destination.CompletedBy))
-                            {
-                                additionalData.Add("CompletedBy", origin.CompletedBy);
-                            }
-
-
-                            if (!String.Equals(origin.ConversationThreadId, destination.ConversationThreadId))
-                            {
-                                additionalData.Add("ConversationThreadId", origin.ConversationThreadId);
-                            }
-
-                            if (!String.Equals(origin.CreatedBy, destination.CreatedBy))
-                            {
-                                additionalData.Add("CreatedBy", origin.CreatedBy);
-                            }
-
-                            if (DateTimeOffset.Compare((DateTimeOffset)origin.CreatedDateTime, (DateTimeOffset)destination.CreatedDateTime) != 0)
-                            {
-                                additionalData.Add("CreatedDateTime", origin.CreatedDateTime);
-                            }
-
-                            if (origin.StartDateTime != null && destination.StartDateTime != null && 
-                                DateTimeOffset.Compare((DateTimeOffset)origin.StartDateTime, (DateTimeOffset)destination.StartDateTime) != 0)
-                            {
-                                additionalData.Add("StartDateTime", origin.StartDateTime);
-                            }
-
-                            if (origin.CompletedDateTime != null &&  destination.CompletedDateTime != null &&
-                                DateTimeOffset.Compare((DateTimeOffset)origin.CompletedDateTime, (DateTimeOffset)destination.CompletedDateTime) != 0)
-                            {
-                                additionalData.Add("CompletedDateTime", origin.CompletedDateTime);
-                            }
-
-                            if (origin.DueDateTime != null &&  destination.DueDateTime != null &&
-                                DateTimeOffset.Compare((DateTimeOffset)origin.DueDateTime, (DateTimeOffset)destination.DueDateTime) != 0)
-                            {
-                                additionalData.Add("DueDateTime", origin.DueDateTime);
-                            }
-
-                            if (!String.Equals(origin.HasDescription, destination.HasDescription))
-                            {
-                                additionalData.Add("HasDescription", origin.HasDescription);
-                            }
-
-                            if (!String.Equals(origin.OrderHint, destination.OrderHint))
-                            {
-                                additionalData.Add("OrderHint", origin.OrderHint);
-                            }
-
-                            if (!String.Equals(origin.PercentComplete, destination.PercentComplete))
-                            {
-                                additionalData.Add("PercentComplete", origin.PercentComplete);
-                            }
-
-                            if (!String.Equals(origin.PlanId, destination.PlanId))
-                            {
-                                additionalData.Add("PlanId", origin.PlanId);
-                            }
-
-                            if (!String.Equals(origin.ReferenceCount, destination.ReferenceCount))
-                            {
-                                additionalData.Add("ReferenceCount", origin.ReferenceCount);
-                            }
-
-                            if (!String.Equals(origin.Url, destination.Url))
-                            {
-                                additionalData.Add("Url", origin.Url);
-                            }
-                            #endregion
-
-                            if (!String.Equals(origin.Priority, destination.Priority))
-                            {
-                                additionalData.Add("Priority", origin.Priority);
-                            }
-
-
-                            if (additionalData.Keys.Count > 0)
-                            {
-                                FieldValueSet fieldsChange = new FieldValueSet();
-                                fieldsChange.AdditionalData = additionalData;
-
-                                try
-                                {
-                                    if (upd % config.ChunkSize != 0)
-                                    {
-                                        var u = GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
-                                    }
-                                    else
-                                    {
-                                        var u = await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
-                                    }
-                                    upd++;
-                                    mainPage.DisplayMessage("Task A: " + add + " D: " + del + " U:" + upd);
-                                }
-                                catch (Exception exception)
-                                {
-                                    mainPage.DisplayMessage($"Task Error Updating:{System.Environment.NewLine}{exception}" + entry.Key);
-                                    App.logger.Error("ConciliationTasks Update " + exception.Message);
-                                }
-                            }
-                        }
-                        catch (Exception exception)
-                        {
-                            mainPage.DisplayMessage($"Task Error Updating:{System.Environment.NewLine}{exception}" + entry.Key);
-                            App.logger.Error("ConciliationTasks Update " + exception.Message);
-                        }
-                    }
-                }
-                #endregion
             }
+            #endregion
+
+
+            #region Update in Sharepoint changes from planner
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, MetaPlannerTask> mytask in PlannerTasks)
+            {
+                if (sharePointTasks.ContainsKey(mytask.Key))
+                {
+                    try
+                    {
+                        MetaPlannerTask origin = PlannerTasks[mytask.Key];
+                        MetaPlannerTask destination = sharePointTasks[mytask.Key];
+
+                        Dictionary<string, object> additionalData = new Dictionary<string, object>();
+                        if (!String.Equals(origin.TaskName, destination.TaskName))
+                        {
+                            additionalData.Add("TaskName", origin.TaskName);
+                        }
+                        #region Changes
+                        if (!String.Equals(origin.Prefix, destination.Prefix))
+                        {
+                            additionalData.Add("Prefix", origin.Prefix);
+                        }
+
+                        if (!String.Equals(origin.Hours, destination.Hours))
+                        {
+                            additionalData.Add("Hours", origin.Hours);
+                        }
+
+                        if (!String.Equals(origin.ActiveChecklistItemCount, destination.ActiveChecklistItemCount))
+                        {
+                            additionalData.Add("ActiveChecklistItemCount", origin.ActiveChecklistItemCount);
+                        }
+
+                        if (!String.Equals(origin.AdditionalData, destination.AdditionalData))
+                        {
+                            additionalData.Add("AdditionalData", origin.AdditionalData);
+                        }
+
+                        if (!String.Equals(origin.Category1, destination.Category1))
+                        {
+                            additionalData.Add("Category1", origin.Category1);
+                        }
+
+                        if (!String.Equals(origin.Category2, destination.Category2))
+                        {
+                            additionalData.Add("Category2", origin.Category2);
+                        }
+
+                        if (!String.Equals(origin.Category3, destination.Category3))
+                        {
+                            additionalData.Add("Category3", origin.Category3);
+                        }
+
+                        if (!String.Equals(origin.Category4, destination.Category4))
+                        {
+                            additionalData.Add("Category4", origin.Category4);
+                        }
+
+                        if (!String.Equals(origin.Category5, destination.Category5))
+                        {
+                            additionalData.Add("Category5", origin.Category5);
+                        }
+
+                        if (!String.Equals(origin.Category6, destination.Category6))
+                        {
+                            additionalData.Add("Category6", origin.Category6);
+                        }
+
+                        if (!String.Equals(origin.AssigneePriority, destination.AssigneePriority))
+                        {
+                            additionalData.Add("AssigneePriority", origin.AssigneePriority);
+                        }
+
+                        if (!String.Equals(origin.AssignmentsCount, destination.AssignmentsCount))
+                        {
+                            additionalData.Add("AssignmentsCount", origin.AssignmentsCount);
+                        }
+
+                        if (!String.Equals(origin.BucketId, destination.BucketId))
+                        {
+                            additionalData.Add("BucketId", origin.BucketId);
+                        }
+
+                        if (!String.Equals(origin.PlanId, destination.PlanId))
+                        {
+                            additionalData.Add("PlanId", origin.PlanId);
+                        }
+
+                        if (!String.Equals(origin.ChecklistItemCount, destination.ChecklistItemCount))
+                        {
+                            additionalData.Add("ChecklistItemCount", origin.ChecklistItemCount);
+                        }
+
+                        if (!String.Equals(origin.CompletedBy, destination.CompletedBy))
+                        {
+                            additionalData.Add("CompletedBy", origin.CompletedBy);
+                        }
+
+
+                        if (!String.Equals(origin.ConversationThreadId, destination.ConversationThreadId))
+                        {
+                            additionalData.Add("ConversationThreadId", origin.ConversationThreadId);
+                        }
+
+                        if (!String.Equals(origin.CreatedBy, destination.CreatedBy))
+                        {
+                            additionalData.Add("CreatedBy", origin.CreatedBy);
+                        }
+
+                        if (DateTimeOffset.Compare((DateTimeOffset)origin.CreatedDateTime, (DateTimeOffset)destination.CreatedDateTime) != 0)
+                        {
+                            additionalData.Add("CreatedDateTime", origin.CreatedDateTime);
+                        }
+
+                        if (origin.StartDateTime != null && destination.StartDateTime != null && 
+                            DateTimeOffset.Compare((DateTimeOffset)origin.StartDateTime, (DateTimeOffset)destination.StartDateTime) != 0)
+                        {
+                            additionalData.Add("StartDateTime", origin.StartDateTime);
+                        }
+
+                        if (origin.CompletedDateTime != null &&  destination.CompletedDateTime != null &&
+                            DateTimeOffset.Compare((DateTimeOffset)origin.CompletedDateTime, (DateTimeOffset)destination.CompletedDateTime) != 0)
+                        {
+                            additionalData.Add("CompletedDateTime", origin.CompletedDateTime);
+                        }
+
+                        if (origin.DueDateTime != null &&  destination.DueDateTime != null &&
+                            DateTimeOffset.Compare((DateTimeOffset)origin.DueDateTime, (DateTimeOffset)destination.DueDateTime) != 0)
+                        {
+                            additionalData.Add("DueDateTime", origin.DueDateTime);
+                        }
+
+                        if (!String.Equals(origin.HasDescription, destination.HasDescription))
+                        {
+                            additionalData.Add("HasDescription", origin.HasDescription);
+                        }
+
+                        if (!String.Equals(origin.OrderHint, destination.OrderHint))
+                        {
+                            additionalData.Add("OrderHint", origin.OrderHint);
+                        }
+
+                        if (!String.Equals(origin.PercentComplete, destination.PercentComplete))
+                        {
+                            additionalData.Add("PercentComplete", origin.PercentComplete);
+                        }
+
+                        if (!String.Equals(origin.PlanId, destination.PlanId))
+                        {
+                            additionalData.Add("PlanId", origin.PlanId);
+                        }
+
+                        if (!String.Equals(origin.ReferenceCount, destination.ReferenceCount))
+                        {
+                            additionalData.Add("ReferenceCount", origin.ReferenceCount);
+                        }
+
+                        if (!String.Equals(origin.Url, destination.Url))
+                        {
+                            additionalData.Add("Url", origin.Url);
+                        }
+                        #endregion
+
+                        if (!String.Equals(origin.Priority, destination.Priority))
+                        {
+                            additionalData.Add("Priority", origin.Priority);
+                        }
+
+
+                        if (additionalData.Keys.Count > 0)
+                        {
+
+                            FieldValueSet fieldsChange = new FieldValueSet();
+                            fieldsChange.AdditionalData = additionalData;
+
+                            try
+                            {
+                                if (upd % config.ChunkSize != 0)
+                                {
+                                    var u =  GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[mytask.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                                }
+                                else
+                                {
+                                    var u = await GraphClient.Sites[config.Site].Lists["tasks"].Items[itemIds[mytask.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                                }
+                                upd++;
+                                mainPage.DisplayMessage("Task A: " + add + " D: " + del + " U:" + upd);
+                            }
+                            catch (Exception exception)
+                            {
+                                mainPage.DisplayMessage($"Task Error Updating:{System.Environment.NewLine}{exception}" + mytask.Key);
+                                App.logger.Error("ConciliationTasks Update " + exception.Message);
+                            }
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        mainPage.DisplayMessage($"Task Error Updating:{System.Environment.NewLine}{exception}" + mytask.Key);
+                        App.logger.Error("ConciliationTasks Update " + exception.Message);
+                    }
+                }
+            }
+            #endregion            
 
             mainPage.DisplayMessage("Task Added: " + add + " Deleted: " + del + " Updated: " + upd);
             App.logger.Information("ConciliationTasks Task Added: " + add + " Deleted: " + del + " Updated:" + upd);
