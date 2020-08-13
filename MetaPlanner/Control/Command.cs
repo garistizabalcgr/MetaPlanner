@@ -500,7 +500,7 @@ namespace MetaPlanner.Control
 
                 foreach (PlannerTask task in listTasks)
                 {
-                    MetaPlannerTask myTask = new MetaPlannerTask() { TaskId = task.Id, Hours = "0" };
+                    MetaPlannerTask myTask = new MetaPlannerTask() { TaskId = task.Id };
 
                     #region Task custom fields
                     int j = task.Title.IndexOf(";");
@@ -520,7 +520,7 @@ namespace MetaPlanner.Control
                         }
                         else
                         {
-                            myTask.Hours = two.Substring(0, k).Trim();
+                            myTask.Hours = float.Parse(two.Substring(0, k).Trim().Replace('.',','));
                             myTask.TaskName = two.Substring(k + 1).Trim();
                         }
                     }

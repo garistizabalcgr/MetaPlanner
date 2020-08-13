@@ -365,12 +365,12 @@ namespace MetaPlanner.Model
             set { prefix = value; }
         }
         private object hours;
-        public string Hours
+        public float? Hours
         {
             get
             {
                 if (hours != null)
-                    return hours.ToString();
+                    return float.Parse(hours.ToString());
                 else
                     return null;
             }
