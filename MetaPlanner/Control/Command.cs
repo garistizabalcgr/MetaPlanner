@@ -1093,7 +1093,7 @@ namespace MetaPlanner.Control
                     }
                     catch (Exception exeption)
                     {
-                        App.logger.Error("GetPlannerUsers " + exeption.Message);
+                        
                         //Get from historic data
                         MetaPlannerUser theUser;
                         if (sharePointUsers.TryGetValue(assignee.UserId, out theUser))
@@ -1103,6 +1103,7 @@ namespace MetaPlanner.Control
                         else 
                         //is totally forgotten
                         {
+                            App.logger.Error("GetPlannerUsers " + exeption.Message);
                             PlannerUsers.Add(assignee.UserId, new MetaPlannerUser()
                             {
                                 UserId = assignee.UserId,
