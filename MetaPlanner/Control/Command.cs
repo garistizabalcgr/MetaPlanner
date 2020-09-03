@@ -520,8 +520,15 @@ namespace MetaPlanner.Control
                         }
                         else
                         {
-                            myTask.Hours = float.Parse(two.Substring(0, k).Trim().Replace('.',','));
+                            try { 
+                            myTask.Hours = float.Parse(two.Substring(0, k).Trim().Replace('.', ','));
                             myTask.TaskName = two.Substring(k + 1).Trim();
+                            }
+                            catch(Exception badNumber)
+                            {
+                                myTask.Hours = -1;
+                                myTask.TaskName = two.Trim();
+                            }
                         }
                     }
                     #endregion
