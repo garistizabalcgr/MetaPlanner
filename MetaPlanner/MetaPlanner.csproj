@@ -123,6 +123,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Control\Command.cs" />
+    <Compile Include="Model\BasicUser.cs" />
     <Compile Include="Model\MetaPlannerAssignment.cs" />
     <Compile Include="Model\MetaPlannerBucket.cs" />
     <Compile Include="Model\MetaPlannerHierarchy.cs" />

@@ -214,5 +214,26 @@ namespace MetaPlanner
             }
 
         }
+
+        private async void btnLoadAllUsers_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                App.logger.Information("Start ProcessAllUsers");
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
+
+                await Control.ProcessAllUsers();
+                RadDataGrid.DataContext = Control.AllUsers.Values;
+
+                Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
+                App.logger.Information("End ProcessAllUsers");
+            }
+            catch (Exception exception)
+            {
+                await DisplayMessageAsync($"ProcessAllUsers:{System.Environment.NewLine}{exception}");
+                App.logger.Error(exception.Message);
+                return;
+            }
+        }
     }
 }

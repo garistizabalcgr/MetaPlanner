@@ -33,6 +33,10 @@ namespace MetaPlanner.Control
         //Dictionary of Users
         public Dictionary<string, MetaPlannerUser> PlannerUsers = new Dictionary<string, MetaPlannerUser>();
 
+        //Dictionary of AllUsers
+        public Dictionary<string, BasicUser> AllUsers = new Dictionary<string, BasicUser>();
+
+
         //Client to Cloud Service
         private GraphServiceClient GraphClient;
 
@@ -1127,9 +1131,63 @@ namespace MetaPlanner.Control
             App.logger.Information("GetPlannerUsers Total: " + PlannerUsers.Count);
         }
 
-       
-        
-        public async Task ProcessUsers() {
+
+        public async Task ProcessAllUsers()
+        {
+            System.Globalization.TextInfo textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
+
+            // Sign-in user using MSAL and obtain an access token for MS Graph
+            GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+
+
+            var page = await GraphClient.Users.Request().GetAsync();
+            List<User> listUsers = new List<User>();
+            while (page.Count > 0)
+            {
+                listUsers.AddRange(page);
+                if (page.NextPageRequest != null)
+                {
+                    page = await page.NextPageRequest.GetAsync();
+                }
+                else
+                {
+                    break;
+                }
+            }
+            mainPage.DisplayMessage("AllUsers getting " + listUsers.Count);
+
+            AllUsers = new Dictionary<string, BasicUser>();
+            foreach (User u in listUsers)
+            {
+                BasicUser bu = new BasicUser();
+                bu.Mail = u.Mail;
+                bu.UserPrincipalName = u.UserPrincipalName;
+                string fullName = u.GivenName + " " + u.Surname;
+                fullName = fullName.Replace('Á', 'A');
+                fullName = fullName.Replace('É', 'E');
+                fullName = fullName.Replace('Í', 'I');
+                fullName = fullName.Replace('Ó', 'O');
+                fullName = fullName.Replace('Ú', 'U');
+                fullName = fullName.Replace('á', 'a');
+                fullName = fullName.Replace('é', 'e');
+                fullName = fullName.Replace('í', 'i');
+                fullName = fullName.Replace('ó', 'o');
+                fullName = fullName.Replace('ú', 'u');
+
+                bu.NombreCompleto = textInfo.ToTitleCase(fullName.ToLower());
+                if (bu.Mail != null && bu.Mail.ToLower().Contains("@contraloria.gov.co"))
+                {
+                    AllUsers.Add(u.Id, bu);
+                }
+            }
+
+                //Prepare the stream to upload
+                string fileName = "AllUsers" + ".csv";
+            await writer.Write(AllUsers, storageFolder, fileName);
+
+            mainPage.DisplayMessage("AllUsers Done " + listUsers.Count);
+        }
+            public async Task ProcessUsers() {
 
             // Sign-in user using MSAL and obtain an access token for MS Graph
             GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
