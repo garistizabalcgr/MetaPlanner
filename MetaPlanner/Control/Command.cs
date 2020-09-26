@@ -33,8 +33,8 @@ namespace MetaPlanner.Control
         //Dictionary of Users
         public Dictionary<string, MetaPlannerUser> PlannerUsers = new Dictionary<string, MetaPlannerUser>();
 
-        //Dictionary of AllUsers
-        public Dictionary<string, BasicUser> AllUsers = new Dictionary<string, BasicUser>();
+        //Dictionary of Active Directory Users
+        public Dictionary<string, BasicUser> ActiveDirectoryUsers= new Dictionary<string, BasicUser>();
 
 
         //Client to Cloud Service
@@ -92,7 +92,7 @@ namespace MetaPlanner.Control
             mainPage.DisplayMessage("GetPlannerPlans getting " + listPlanner.Count);
 
             //Get hierarchy from Sharepoint
-            var listHierarchy = await GetSharePointList("hierarchy"); 
+            var listHierarchy = await GetSharePointList(config.Site,"hierarchy"); 
             Dictionary<string, MetaPlannerHierarchy> sharePointHierarchy = new Dictionary<string, MetaPlannerHierarchy>();
             foreach (ListItem item in listHierarchy)
             {
@@ -147,7 +147,7 @@ namespace MetaPlanner.Control
                 if (config.IsSharePointListEnabled)
                 {
                     #region Get bulk data from SharePoint
-                    var listPlans = await GetSharePointList("plans");
+                    var listPlans = await GetSharePointList(config.Site, "plans");
 
                     Dictionary<string, MetaPlannerPlan> sharePointPlans = new Dictionary<string, MetaPlannerPlan>();
                     Dictionary<string, string> itemIds = new Dictionary<string, string>();
@@ -350,7 +350,7 @@ namespace MetaPlanner.Control
                 if (config.IsSharePointListEnabled)
                 {
                     #region Get bulk data from SharePoint
-                    var listBuckets = await GetSharePointList("buckets");
+                    var listBuckets = await GetSharePointList(config.Site, "buckets");
 
                     Dictionary<string, MetaPlannerBucket> sharePointBuckets = new Dictionary<string, MetaPlannerBucket>();
                     Dictionary<string, string> itemIds = new Dictionary<string, string>();
@@ -611,7 +611,7 @@ namespace MetaPlanner.Control
                 {
 
                     #region Get bulk data from SharePoint Tasks
-                    var listTasks = await GetSharePointList("tasks");
+                    var listTasks = await GetSharePointList(config.Site, "tasks");
 
                     Dictionary<string, MetaPlannerTask> sharePointTasks = new Dictionary<string, MetaPlannerTask>();
                     Dictionary<string, string> itemIds = new Dictionary<string, string>();
@@ -653,7 +653,7 @@ namespace MetaPlanner.Control
 
                     mainPage.DisplayMessage("ConciliationTasks called " + sharePointTasks.Count);
                 #region Get bulk data from SharePoint
-                var listAssignees = await GetSharePointList("assignees");
+                var listAssignees = await GetSharePointList(config.Site, "assignees");
 
                     Dictionary<string, MetaPlannerAssignment> sharePointAsignees = new Dictionary<string, MetaPlannerAssignment>();
                     Dictionary<string, string> itemIdsA = new Dictionary<string, string>();
@@ -1074,7 +1074,7 @@ namespace MetaPlanner.Control
 
 
              //Get historic users from Sharepoint
-            var listUsers = await GetSharePointList("users");
+            var listUsers = await GetSharePointList(config.Site, "users");
             Dictionary<string, MetaPlannerUser> sharePointUsers = new Dictionary<string, MetaPlannerUser>();
             foreach (ListItem item in listUsers)
             {
@@ -1131,63 +1131,7 @@ namespace MetaPlanner.Control
             App.logger.Information("GetPlannerUsers Total: " + PlannerUsers.Count);
         }
 
-
-        public async Task ProcessAllUsers()
-        {
-            System.Globalization.TextInfo textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
-
-            // Sign-in user using MSAL and obtain an access token for MS Graph
-            GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
-
-
-            var page = await GraphClient.Users.Request().GetAsync();
-            List<User> listUsers = new List<User>();
-            while (page.Count > 0)
-            {
-                listUsers.AddRange(page);
-                if (page.NextPageRequest != null)
-                {
-                    page = await page.NextPageRequest.GetAsync();
-                }
-                else
-                {
-                    break;
-                }
-            }
-            mainPage.DisplayMessage("AllUsers getting " + listUsers.Count);
-
-            AllUsers = new Dictionary<string, BasicUser>();
-            foreach (User u in listUsers)
-            {
-                BasicUser bu = new BasicUser();
-                bu.Mail = u.Mail;
-                bu.UserPrincipalName = u.UserPrincipalName;
-                string fullName = u.GivenName + " " + u.Surname;
-                fullName = fullName.Replace('Á', 'A');
-                fullName = fullName.Replace('É', 'E');
-                fullName = fullName.Replace('Í', 'I');
-                fullName = fullName.Replace('Ó', 'O');
-                fullName = fullName.Replace('Ú', 'U');
-                fullName = fullName.Replace('á', 'a');
-                fullName = fullName.Replace('é', 'e');
-                fullName = fullName.Replace('í', 'i');
-                fullName = fullName.Replace('ó', 'o');
-                fullName = fullName.Replace('ú', 'u');
-
-                bu.NombreCompleto = textInfo.ToTitleCase(fullName.ToLower());
-                if (bu.Mail != null && bu.Mail.ToLower().Contains("@contraloria.gov.co"))
-                {
-                    AllUsers.Add(u.Id, bu);
-                }
-            }
-
-                //Prepare the stream to upload
-                string fileName = "AllUsers" + ".csv";
-            await writer.Write(AllUsers, storageFolder, fileName);
-
-            mainPage.DisplayMessage("AllUsers Done " + listUsers.Count);
-        }
-            public async Task ProcessUsers() {
+        public async Task ProcessUsers() {
 
             // Sign-in user using MSAL and obtain an access token for MS Graph
             GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
@@ -1197,7 +1141,7 @@ namespace MetaPlanner.Control
             if (config.IsSharePointListEnabled)
             {
                 #region Get bulk data from SharePoint
-                var listUsers = await GetSharePointList("users");
+                var listUsers = await GetSharePointList(config.Site, "users");
 
                 Dictionary<string, MetaPlannerUser> sharePointUsers = new Dictionary<string, MetaPlannerUser>();
                 Dictionary<string, string> itemIds = new Dictionary<string, string>();
@@ -1382,13 +1326,13 @@ namespace MetaPlanner.Control
         }
 
 
-        private async Task<List<ListItem>> GetSharePointList(string listName)
+        private async Task<List<ListItem>> GetSharePointList(string site, string listName)
         {
             var queryOptions = new List<QueryOption>()
                 {
                     new QueryOption("expand", "fields")
                 };
-            var items = await GraphClient.Sites[config.Site].Lists[listName].Items.Request(queryOptions).GetAsync();
+            var items = await GraphClient.Sites[site].Lists[listName].Items.Request(queryOptions).GetAsync();
             List<ListItem> allItems = new List<ListItem>();
             while (items.Count > 0)
             {
@@ -1405,9 +1349,9 @@ namespace MetaPlanner.Control
             return allItems;
         }
 
-        private async Task CleanSharepointList(string listName)
+        private async Task CleanSharepointList(string site,string listName)
         {
-            var items = await GraphClient.Sites[config.Site].Lists[listName].Items.Request().GetAsync();
+            var items = await GraphClient.Sites[site].Lists[listName].Items.Request().GetAsync();
             List<ListItem> allItems = new List<ListItem>();
             while (items.Count > 0)
             {
@@ -1453,10 +1397,10 @@ namespace MetaPlanner.Control
             GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
 
             
-            CleanSharepointList("tasks");
-            CleanSharepointList("buckets");
-            CleanSharepointList("plans");
-            await CleanSharepointList("assignees");
+            CleanSharepointList(config.Site, "tasks");
+            CleanSharepointList(config.Site, "buckets");
+            CleanSharepointList(config.Site, "plans");
+            await CleanSharepointList(config.Site, "assignees");
 
 
             Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
@@ -1558,5 +1502,220 @@ namespace MetaPlanner.Control
             }
         }
 
+
+        private string RemoveAccent(string fullName)
+        {
+            string output = "";
+            System.Globalization.TextInfo textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
+            if (fullName != null)
+            {
+                fullName = fullName.Replace('Á', 'A');
+                fullName = fullName.Replace('É', 'E');
+                fullName = fullName.Replace('Í', 'I');
+                fullName = fullName.Replace('Ó', 'O');
+                fullName = fullName.Replace('Ú', 'U');
+                fullName = fullName.Replace('á', 'a');
+                fullName = fullName.Replace('é', 'e');
+                fullName = fullName.Replace('í', 'i');
+                fullName = fullName.Replace('ó', 'o');
+                fullName = fullName.Replace('ú', 'u');
+                output = textInfo.ToTitleCase(fullName.ToLower());
+            }
+            return output;
+        }
+        #region ActiveDirectory
+
+        /// <summary>
+        /// Get all data from Plans from Planner in plannerPlans
+        /// </summary>
+        private async Task GetActiveDirectoryUsers()
+        {
+
+            #region Get Location from SharePoint
+            var listLocations = await GetSharePointList(config.AltSite, "Gerencias");
+
+            Dictionary<string, BasicLocation> sharePointLocation = new Dictionary<string, BasicLocation>();
+            foreach (ListItem item in listLocations)
+            {
+                BasicLocation myLocation = new BasicLocation(item.Fields.AdditionalData);
+                sharePointLocation.Add(myLocation.State, myLocation);
+            }
+            #endregion
+
+            var page = await GraphClient.Users.Request().GetAsync();
+            List<User> listUsers = new List<User>();
+            while (page.Count > 0)
+            {
+                listUsers.AddRange(page);
+                if (page.NextPageRequest != null)
+                {
+                    page = await page.NextPageRequest.GetAsync();
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            ActiveDirectoryUsers = new Dictionary<string, BasicUser>();
+            foreach (User u in listUsers)
+            {
+                if (!u.UserPrincipalName.Contains("congenrep.onmicrosoft")) { 
+                    BasicUser bUser = new BasicUser()
+                    {
+                        UserPrincipalName = u.UserPrincipalName,
+                        Cargo = u.JobTitle,
+                        Dependencia = RemoveAccent(u.Department),
+                        NombreCompleto = RemoveAccent(u.DisplayName),
+                        //Default Value
+                        Sede = "Bogota D.C. - Bogota D.C."
+                    };
+
+                    //If last word is valid state update Location
+                    int len = bUser.Dependencia.Split(" ").Length;
+                    string dep = bUser.Dependencia.Split(" ")[len-1].Trim();
+                    BasicLocation myLoc;
+                    if (sharePointLocation.TryGetValue(dep,out myLoc))
+                    {
+                        bUser.Sede = myLoc.Location;
+                    }
+                    ActiveDirectoryUsers.Add(bUser.UserPrincipalName, bUser);
+                }
+            }
+            mainPage.DisplayMessage("ActiveDirectoryUsers getting " + listUsers.Count);
+            App.logger.Information("GetActiveDirectoryUsers Total: " + listUsers.Count);
+
+        }
+
+        private async Task ConciliationActiveDirectoryUsers(Dictionary<string, BasicUser> sharePointADUsers, Dictionary<string, string> itemIds, Dictionary<string, ListItem> items)
+        {
+            int add = 0;
+            int del = 0;
+            int upd = 0;
+
+            #region Add from planner not in sharepoint
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, BasicUser> entry in ActiveDirectoryUsers)
+            {
+                if (!sharePointADUsers.ContainsKey(entry.Key))
+                {
+                    var planItem = new ListItem
+                    {
+                        Fields = new FieldValueSet
+                        {
+                            AdditionalData = new Dictionary<string, object>()
+                            {
+                                {"Title", entry.Value.UserPrincipalName},
+                                {"NombreCompleto", entry.Value.NombreCompleto},
+                                {"Cargo", entry.Value.Cargo},
+                                {"Dependencia", entry.Value.Dependencia },
+                                {"Sede",  entry.Value.Sede }
+                            }
+                        }
+                    };
+                    if (add % config.ChunkSize != 0)
+                    {
+                        var a = GraphClient.Sites[config.AltSite].Lists["DAUsers"].Items.Request().AddAsync(planItem);
+                    }
+                    else
+                    {
+                        var a = await GraphClient.Sites[config.AltSite].Lists["DAUsers"].Items.Request().AddAsync(planItem);
+                    }
+                    add++;
+                    mainPage.DisplayMessage("UsuarioDA A: " + add + " D: " + del + " U:" + upd);
+                }
+            }
+            #endregion
+
+            #region Update in Sharepoint changes from planner
+            //Add new from Planner to SharePoint
+            foreach (KeyValuePair<string, BasicUser> entry in ActiveDirectoryUsers)
+            {
+                if (sharePointADUsers.ContainsKey(entry.Key))
+                {
+                    BasicUser origin = ActiveDirectoryUsers[entry.Key];
+                    BasicUser destination = sharePointADUsers[entry.Key];
+
+                    Dictionary<string, object> additionalData = new Dictionary<string, object>();
+                    if (!String.Equals(origin.Cargo, destination.Cargo))
+                    {
+                        additionalData.Add("Cargo", origin.Cargo);
+                    }
+                    if (!String.Equals(origin.Dependencia, destination.Dependencia))
+                    {
+                        additionalData.Add("Dependencia", origin.Dependencia);
+                    }
+                    if (!String.Equals(origin.Sede, destination.Sede))
+                    {
+                        additionalData.Add("Ubicación", origin.Sede);
+                    }
+                    if (!String.Equals(origin.NombreCompleto, destination.NombreCompleto))
+                    {
+                        additionalData.Add("NombreCompleto", origin.NombreCompleto);
+                    }
+                    //CreateDate is readOnly
+                    if (additionalData.Keys.Count > 0)
+                    {
+                        FieldValueSet fieldsChange = new FieldValueSet();
+                        fieldsChange.AdditionalData = additionalData;
+
+                        if (upd % config.ChunkSize != 0)
+                        {
+                            object obj = GraphClient.Sites[config.AltSite].Lists["DAUsers"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        }
+                        else
+                        {
+                            object obj = await GraphClient.Sites[config.AltSite].Lists["DAUsers"].Items[itemIds[entry.Key]].Fields.Request().UpdateAsync(fieldsChange);
+                        }
+                        upd++;
+                        mainPage.DisplayMessage("UsuariosDA A: " + add + " D: " + del + " U:" + upd);
+                    }
+                }
+            }
+            #endregion
+
+            App.logger.Information("ConciliationActiveDirectoryUsers Plan Added: " + add + " Deleted: " + del + " Updated:" + upd);
+        }
+
+        public async Task ProcessActiveDirectoryUsers()
+        {
+            // Sign-in user using MSAL and obtain an access token for MS Graph
+            GraphClient = await SignInAndInitializeGraphServiceClient(config.ScopesArray);
+
+            await GetActiveDirectoryUsers();
+            await WriteAndUpload(ActiveDirectoryUsers, "ADUsers");
+
+            if (config.IsSharePointListEnabled)
+            {
+                #region Get bulk data from SharePoint
+                var listADUsers = await GetSharePointList(config.AltSite, "DAUsers");
+
+                Dictionary<string, BasicUser> sharePointADUsers = new Dictionary<string, BasicUser>();
+                Dictionary<string, string> itemIds = new Dictionary<string, string>();
+                Dictionary<string, ListItem> items = new Dictionary<string, ListItem>();
+                foreach (ListItem item in listADUsers)
+                {
+                    try
+                    {
+                        BasicUser user = new BasicUser(item.Fields.AdditionalData);
+                        if (user.UserPrincipalName.Trim().Length > 1) { 
+                            sharePointADUsers.Add(user.UserPrincipalName, user);
+                            itemIds.Add(user.UserPrincipalName, item.Id);
+                            items.Add(item.Id, item);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        App.logger.Information("ProcessActiveDirectoryUsers Adding: " + exception.Message + "user "+item.Id + " "+ item.Fields.AdditionalData.Values.ToString());
+                    }
+                }
+                #endregion
+                await ConciliationActiveDirectoryUsers(sharePointADUsers, itemIds, items);
+            }
+
+            mainPage.DisplayMessage("ProcessActiveDirectoryUsers Done " + ActiveDirectoryUsers.Count);
+        }
+
+        #endregion
     }
 }

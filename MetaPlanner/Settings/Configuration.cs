@@ -96,6 +96,8 @@ namespace MetaPlanner
 
         public string Site { get; set; }
 
+        public string AltSite { get; set; }
+
         public string Drive { get; set; }
 
         public string FolderName { get; set; }

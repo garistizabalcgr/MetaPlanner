@@ -7,10 +7,17 @@ using System.Threading.Tasks;
 namespace MetaPlanner.Model
 {
     class BasicUser
-    {
-
-        public BasicUser()
+    {       public BasicUser()
         {
+        }
+
+        public BasicUser(IDictionary<string, object> fields)
+        {
+            fields.TryGetValue("Title", out upn);
+            fields.TryGetValue("NombreCompleto", out fullName);
+            fields.TryGetValue("Cargo", out jobTitle);
+            fields.TryGetValue("Dependencia", out department);
+            fields.TryGetValue("Sede", out location);
         }
 
         private object fullName;
@@ -21,22 +28,11 @@ namespace MetaPlanner.Model
                 if (fullName != null)
                     return fullName.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { fullName = value; }
         }
-        private object mail;
-        public string Mail
-        {
-            get
-            {
-                if (mail != null)
-                    return mail.ToString();
-                else
-                    return null;
-            }
-            set { mail = value; }
-        }
+
 
         private object upn;
         public string UserPrincipalName
@@ -46,10 +42,48 @@ namespace MetaPlanner.Model
                 if (upn != null)
                     return upn.ToString();
                 else
-                    return null;
+                    return "";
             }
             set { upn = value; }
         }
 
+        private object jobTitle;
+        public string Cargo
+        {
+            get
+            {
+                if (jobTitle != null)
+                    return jobTitle.ToString();
+                else
+                    return "";
+            }
+            set { jobTitle = value; }
+        }
+
+        private object department;
+        public string Dependencia
+        {
+            get
+            {
+                if (department != null)
+                    return department.ToString();
+                else
+                    return "";
+            }
+            set { department = value; }
+        }
+
+        private object location;
+        public string Sede
+        {
+            get
+            {
+                if (location != null)
+                    return location.ToString();
+                else
+                    return "";
+            }
+            set { location = value; }
+        }
     }
 }

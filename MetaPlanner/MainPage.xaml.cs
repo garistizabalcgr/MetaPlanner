@@ -215,22 +215,22 @@ namespace MetaPlanner
 
         }
 
-        private async void btnLoadAllUsers_Click(object sender, RoutedEventArgs e)
+        private async void btnLoadADUsers_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                App.logger.Information("Start ProcessAllUsers");
+                App.logger.Information("Start ProcessActiveDirectoryUsers");
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Wait, 1);
 
-                await Control.ProcessAllUsers();
-                RadDataGrid.DataContext = Control.AllUsers.Values;
+                await Control.ProcessActiveDirectoryUsers();
+                RadDataGrid.DataContext = Control.ActiveDirectoryUsers.Values;
 
                 Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
-                App.logger.Information("End ProcessAllUsers");
+                App.logger.Information("End ProcessActiveDirectoryUsers");
             }
             catch (Exception exception)
             {
-                await DisplayMessageAsync($"ProcessAllUsers:{System.Environment.NewLine}{exception}");
+                await DisplayMessageAsync($"ProcessActiveDirectoryUsers:{System.Environment.NewLine}{exception}");
                 App.logger.Error(exception.Message);
                 return;
             }
